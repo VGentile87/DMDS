@@ -1,0 +1,29 @@
+#!bin/bash                                                                      
+echo -e "Type:\n 1 for MakeClass + Analysis \n 2 for Only Analysis"
+read varname
+echo Hai scelto $varname
+if [ $varname = '1' ]; then
+    cp  $DM_ROOT/src/macros/start.C .
+    root -l dm_tracks_cl.dm.root <<EOC
+.x start.C()
+.q
+EOC
+rm AutoDict_vector_vector_string_allocator_string_____*
+root -l dm_tracks_cl.dm.root <<EOC
+gSystem->Load("libDMRoot");
+gROOT->ProcessLine(".L myData_v5.C++");
+myrun();
+.q
+EOC
+elif [ $varname =  '2' ]; then
+    cp $DM_ROOT/src/macros/myData_v5.C .
+    root -l dm_tracks_cl.dm.root <<EOC
+gSystem->Load("libDMRoot");
+gROOT->ProcessLine(".L myData_v5.C++");
+myrun();
+.q
+EOC
+    
+else
+    echo "Number incorrect...bye"
+fi

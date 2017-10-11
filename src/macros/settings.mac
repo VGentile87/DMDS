@@ -1,0 +1,8 @@
+### SETTINGS FILE (V. GENTILE 03/10/2017) ###
+pix_size_x = 0.027349            pixel size x [um]
+pix_size_y = -0.027346           pixel size y [um]
+thr_ldust_br = 2.0               threshold brigthness for large dust  (log10 scale)
+thr_ldust_area = 2.1             threshold number of pixel for large dust (log 10 scale) 
+fid_cut_par = 5                  fiducial cut parameter for nearby large dust (unit of large dust area)
+maxcl = 10000                    max cluster number per view to start the  analysis (no dirty view control) 
+npol = 8                         number of polarizations

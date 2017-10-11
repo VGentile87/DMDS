@@ -1,0 +1,123 @@
+===============================================
+ToDo:
+
+- Make GetImage functions working as following:
+    if(found cluster image), use it
+       else if(found frame image) use it
+          else if(found raw image) use it
+          
+
+============= 31/03/2017 VT ===================
+
+Add DMRView::FixEncoderFaults() function which assume that frames coord should be 
+fixed inside view overwise do correction for FR and CL objects
+DMRRun::SetFixEncoderFaults(true) should be called before
+
+DMRRun::GetEntry is modified to avoid repetitive reading of the same view
+
+============= 15/03/2017 VT ===================
+
+- add raw images tree to avoid the huge views problem in case of full images saving:
+add in DMRRun:
+    TTree             *eFrames;         // raw frames (images)
+    DMRFrameRaw       *eFrameRaw;       // container for storage into Frames tree
+    DMRFrameRaw *GetFrameRaw()   const { return eFrameRaw; }
+    void         AddFrameRaw();
+
+- Add automatic incrementation of "id" counters in The DMRView::Add* functions
+
+
+
+Fix objects identification convension broken for frames after polarization introduction.
+The nonvension is: all objects stored inside arrays: CL,GR,IM,FR has an "id", which is equal to entry number in the correspondent array in this view and used for a fast access to the object.
+So if we have 30 frames (steps along z) with 8 different polarizations frame.id should range from 0 to 239 and cl.ifr = fr.id;
+to keep the memory about the z-step the variable frame.iz is added
+
+ Added:
+ in DMRFrame:
+    Int_t    ix,iy,iz;            // iz-step index, ix,iy - not used yet
+    
+ in DMRImage, DMRCluster, DMRGrain, from float pol to int ipol:
+  Int_t    ipol;                // polarization angle index
+
+Add in
+DMRViewHeader:
+ TArrayF  polsteps;    // polstep[ipol] - polarization angle steps
+ 
+New functions:
+ virtual DMRImage *DMRImage::ExtractFragment( int x0, int y0, int dx, int dy );
+ DMRImageCl *DMRImageCl::ExtractFragment( int x0, int y0, int dx, int dy );
+ DMRImageCl *DMRFrame::ExtractFragment( int x0, int y0, int dx, int dy );
+
+============= 21/02/2017 VT ===================
+
+Moved from DMRFrame to parent class DMRImage:
+
+ Float_t  pol;                 // polarization angle
+ Int_t    npx;                 // number of pixels above threshold
+ Double_t pxvol;               // integral volume of pixels above the threshold
+ Float_t  ll;                  // light level (volts or au)
+ Float_t  thres;               // threshold for the clasterization
+ 
+
+============= 18/02/2017 VT ===================
+
+add function 
+DMRImage::RemovePixelNoise(int delta)
+
+add script draw_gr to display grains and frames images
+usage:
+
+root -l draw_gr.C
+root [1] fr(2,10,0) // draw frame 10 of view 2 with polarization 0
+root [2] gr(3,101)  // draw best focuse cluster of grain 101 from view 3
+
+
+============= 17/02/2017 VT ===================
+
+Add functions for image handling:
+DMRFrame::CalculateImageStatistics();
+DMRFrame::AddIM2FR( const DMRImageCl &imcl );
+DMRView::AddIM2FR(int ncol, int nrow);  // make combined frame images from DMRImageCl's
+
+
+============= 15/02/2017 VT ===================
+DMRFrame::id;                  // frame id inside view
+DMRFrame::uid;                 // unique frame id inside run
+DMRFrame::pol;                 // polarization angle
+DMRFrame::pxvol;               // integral volume of pixels above the threshold
+DMRFrame::thres;               // threshold for the clasterization
+DMRFrame::ll;                  // light level (volts or au)
+DMRCluster::id;                // cluster id inside this view
+DMRCluster::id_f;              // cluster id inside frame ifr
+
+New classes for fiducial marks handling:
+DMRFiducialMark
+DMRMarksSet
+
+New functions for affine parameters calculation:
+DMRAffine2D::Calculate(int n, Double_t *x0, Double_t *y0, Double_t *x1, Double_t *y1, int flag=0);
+
+============= 13/02/2017 VT ===================
+
+Add structures and trees to save frames and views alignments:
+struct AlignmentParView
+struct AlignmentParFrame
+TTree* DMRRun::eViewAlign   // view neighbours  alignments
+TTree* DMRRun::eFrameAlign; // frames alignments
+
+
+============= 9/02/2017 VT ===================
+
+Modifications in basic classes: 
+(class versions were not modified - data should be reconverted)
+
+DMRCluster::icp;   // copy index in case of cluster duplication (0-default value)
+DMRGrain::icp;     // copy index in case of grain duplication (0-default value)
+DMRViewHeader::id  // view id (can be useful for subselections)
+DMRViewHeader::z   // z of the view
+DMRFrame::ncl      // number of clusters
+DMRFrame::npx      // number of pixels above the threshold
+DMRImageCl::id     // imagecl id (useful for references)
+DMRFrame::ifr -> DMRFrame::id  // for naming uniformity
+DMRImage::GetHist2() - now TH2F instead of TH2I to make filtering (smoothing) possible

@@ -1,0 +1,1620 @@
+#define myData_cxx
+#include "myData.h"
+#include <TH2.h>
+#include <TStyle.h>
+#include <TProfile.h>
+#include <TCanvas.h>
+#include <vector>
+#include <iomanip>
+#include <locale>
+#include <sstream>
+#include <string>
+#include <fstream>
+#include <stdio.h>
+#include <TF1.h>
+#include <TStyle.h>
+#include <fstream>
+#include <TGraph.h>
+#include <TMath.h>
+#include <TRandom3.h>
+#include <TSystem.h>
+#include <TLine.h>
+#include <TGraph.h>
+#include <TF1.h>
+
+using namespace std;
+
+//// SETTINGS
+double x_pix_size=0; //um
+double y_pix_size=0; //um
+double thr_ldust_br =0;
+double thr_ldust_area =0;
+double fid_cut_par=0;
+double maxcl=0;
+const int npol=8;
+//////////////
+
+///// TREE VARIABLES /////////////
+Bool_t eLargeDust=false;
+Bool_t eGoodZone=false;
+Bool_t eShadow=false;
+Bool_t eClustTypeDust=false;
+Int_t eGrainID=0;
+Int_t ePolID=0;
+Int_t eViewID=0;
+Int_t eBfcPolID=0;
+Int_t eBfcGap=0;
+Int_t eNcl=0;
+Int_t eNgr=0;
+Int_t eNclFr=0;
+Int_t ePuls=0;
+Int_t eBfcID=0;
+Int_t eNumIm=0;
+Int_t eImCols=0;
+Int_t eImRows=0;
+Double_t eImArea=0;
+Double_t eGrainPol=0;
+Double_t eGrainx=0;
+Double_t eGrainy=0;
+Double_t ePreGrainx=0;
+Double_t ePreGrainy=0;
+Double_t eGrainz=0;
+Double_t eClx=0;
+Double_t eCly=0;
+Double_t eClz=0;
+Double_t eGrainrRms=0;
+Double_t eGrainxRms=0;
+Double_t eGrainyRms=0;
+Double_t eGrainzRms=0;
+Double_t eGrainMinRms=0;
+Double_t eGrainMajRms=0;
+Double_t eGrainPhiRms=0;
+Double_t eGrainMin=0;
+Double_t eGrainMaj=0;
+Double_t eGrainEll=0;
+Double_t eGrainPhi=0;
+Double_t eGrainTheta=0;
+Double_t eClustx=0;
+Double_t eClusty=0;
+Double_t eClustz=0;
+Double_t eVolume=0;
+Double_t eBfcVolume=0;
+Double_t eFrBfVolume=0;
+Double_t eArea=0;
+Double_t eAreaRms=0;
+Double_t eGrainArea=0;
+Double_t eBfcArea=0;
+Double_t eFrBfArea=0;
+Double_t eBfcBorderFrame=0;
+Double_t eXView=0;
+Double_t eYView=0;
+Double_t eZ=0;
+Double_t eZlen=0;
+Int_t eChain=0;
+Int_t eSameFrame=0;
+Int_t eNFrame=0;
+Int_t eFrame=0;
+Int_t eSetFrame=0;
+Int_t eDeltaFrame=0;
+Double_t eClDist=0;
+Int_t eSetID=0;
+Int_t eSetNCopy=0;
+Double_t eSetGapZ=0;
+Double_t eSetGapZ2=0;
+Double_t eSetGap=0;
+Double_t eSetPath=0;
+Double_t eSetMeanPath=0;
+Double_t eSetRmsPath=0;
+Double_t eSetMaxPath=0;
+Double_t eSetMaxDist=0;
+Double_t eSetTwoPeakDist=0;
+Double_t eSetTwoPeakPhi=0;
+Double_t eSetTwoPeakDVol=0;
+Double_t eSetTwoPeakDNpx=0;
+Double_t eSetTwoPeakDBri=0;
+Double_t eSetMaxPol1=0;
+Double_t eSetMaxPol2=0;
+Double_t eSetMaxPixDist=0;
+Double_t eSetMaxBar=0;
+Double_t eSetMaxAmp=0;
+Double_t eSetXRms=0;
+Double_t eSetYRms=0;
+Double_t eSetXBar=0;
+Double_t eSetYBar=0;
+Double_t eSetXMaxBar=0;
+Double_t eSetYMaxBar=0;
+Double_t eSetXMinBar=0;
+Double_t eSetYMinBar=0;
+Double_t eSetPhiRms=0;
+Double_t eSetPhiMean=0;
+Double_t eSetChi2=0;
+Double_t eMinDistGrain=0;
+Double_t eSetPhi=0;
+Double_t eSetPhiBar=0;
+Double_t eSetTheBar=0;
+Double_t eSetPhiFit=0;
+Double_t eSetMeanBright=0;
+Double_t eIsolated=0;
+Double_t eSetNpxRms=0;
+Double_t eSetVolRms=0;
+Double_t eSetVolRatio=0;
+Double_t eBfcMeanBkg=0;
+Double_t eBfcSigPeak=0;
+Double_t eBfcWeigth=0;
+Double_t eSclMeanBkg=0;
+Double_t eSclSigPeak=0;
+Double_t eGrMeanBkg=0;
+Double_t eGrSigPeak=0;
+Double_t eGrSclMeanBkg=0;
+Double_t eGrSclSigPeak=0;
+Double_t eGrWeigth=0;
+/////// Microtracks /////////
+Int_t eMTrk=0;
+Int_t eMTGr=-1;
+Int_t eMTNfr=-1;
+Double_t eMTPhi=-10;
+Double_t eMTThe=0;
+Double_t eMTLen=-1;
+Double_t eMTChi2=-1;
+Double_t eMTVolDif=-1;
+////////////////////////////////
+
+
+//// OTHER DEFINITIONS /////////
+Int_t viewID=0;
+Int_t sum_vid=0;
+Int_t sum_aid=0;
+Double_t xlast=0.;
+Double_t ylast=0.;
+Double_t zlast=0.;
+
+Double_t xmin=0.;
+Double_t ymin=0.;
+Double_t zmin=0.;
+
+Double_t minor_good=0.;
+Double_t ell_good=0.;
+
+Int_t tmp_gr_dist=0;
+Double_t tmp_gap=-1;
+Int_t tmp_frame=-1;
+Int_t n_ifr=1;
+Int_t tmp_ifr=-1;
+Int_t tmp_same_frame=-1;
+
+Double_t xydist=0;
+Double_t hdist=0;
+Double_t tmp_rdist=-1;
+Double_t tmp_rdist2=-1;
+Double_t tmp_rdist_ldust=-1;
+
+Double_t clust_tracks_dist=1000;
+Double_t rdist_min=100;
+Double_t rdist=0.;
+Double_t phiang2=0.;
+Double_t npeak_vol_dif=0.;
+Double_t npeak_npx_dif=0.;
+Double_t npeak_bri_dif=0.;
+Double_t bfcl_rdist=0.;
+Double_t bfcl_rdist2=0.;
+Double_t bfcl_rdist3=0.;
+Double_t bfcl_rdist_pol=0.;
+Double_t bfcl_rdist_ldust=0.;
+Double_t rdist3=0.;
+Double_t xdist=0.;
+Double_t ydist=0.;
+Double_t zdist=0.;
+Int_t NoClust_first=-1;
+Int_t xbin=-1;
+Int_t ybin=-1;
+
+Double_t xgrain=0;
+Double_t ygrain=0;
+Double_t zgrain=0;
+
+
+Double_t scale_result[4]={};
+Double_t gr_scale_result[2]={};
+
+Int_t tmp_gr=-1;
+Int_t index_pol=0;
+
+Double_t pre_step_x=0;
+Double_t pre_step_y=0;
+Double_t first_step_x=0;
+Double_t first_step_y=0;
+Int_t match=0;
+Double_t scale_ref=0;
+
+const int nsides=4;
+Double_t area_cut=0;
+Int_t iLarge_dust=0;
+UInt_t minclust=6;
+Long64_t index_clust=0;
+Long64_t index_fr_clust=0;
+Double_t fiducial_cut=0;
+
+
+///////// ARRAYS ///////////////////
+Double_t grain_Ox[kMaxgr]={};
+Double_t grain_Oy[kMaxgr]={};
+Double_t grain_rx[kMaxgr]={};
+Double_t grain_ry[kMaxgr]={};
+Double_t grain_area[kMaxgr]={};
+Double_t bfcl_Area[kMaxgr]={};
+Double_t bfcl_Vol[kMaxgr]={};
+Double_t im_Cols[kMaxgr]={};
+Double_t im_Rows[kMaxgr]={};
+Double_t im_Area[kMaxgr]={};
+Double_t x_gr_rms[kMaxgr]={};
+Double_t y_gr_rms[kMaxgr]={};
+Double_t z_gr_rms[kMaxgr]={};
+Double_t min_gr_rms[kMaxgr]={};
+Double_t maj_gr_rms[kMaxgr]={};
+Double_t phi_gr_rms[kMaxgr]={};
+Double_t area_gr_rms[kMaxgr]={};
+Double_t xdust[kMaxgr]={};
+Double_t ydust[kMaxgr]={};
+Double_t zdust[kMaxgr]={};
+Int_t gr_chain[kMaxgr]={};
+Double_t dist_cl_gr[kMaxgr]={};
+Int_t pol_id[kMaxgr]={};
+Double_t set_chi2[kMaxgr]={};
+Double_t min_dist_grain[kMaxgr]={};
+   
+bool grain[kMaxgr]={};
+bool shadow[kMaxgr]={false};
+bool ctd[kMaxgr]={false};
+bool ldust[kMaxgr]={false};
+bool bfc_border[kMaxgr]={false};
+Int_t same_grain[kMaxgr]={};
+Int_t gr_copy[kMaxgr]={};
+Int_t gr_180[kMaxgr]={};
+   
+Int_t bfc_gap[kMaxgr]={};
+Double_t twopeak_phi[kMaxgr]={};
+Double_t twopeak_dist[kMaxgr]={};
+Double_t twopeak_dvol[kMaxgr]={};
+Double_t twopeak_dnpx[kMaxgr]={};
+Double_t twopeak_dbri[kMaxgr]={};
+Double_t gr_vol_ref[kMaxgr]={};
+Double_t gr_vol_mean[kMaxgr]={};
+Double_t gr_vol_mean_bar[kMaxgr]={};
+Double_t gr_vol_rms_bar[kMaxgr]={};
+Double_t gr_npx_rms_bar[kMaxgr]={};
+Double_t gr_vol_rms[kMaxgr]={};
+Double_t gr_npx_rms[kMaxgr]={};
+Double_t gr_phi_rms[kMaxgr]={};
+Double_t gr_x_rms[kMaxgr]={};
+Double_t gr_y_rms[kMaxgr]={};
+Double_t gr_z_rms[kMaxgr]={};
+Double_t gr_x_mean[kMaxgr]={};
+Double_t gr_y_mean[kMaxgr]={};
+Double_t gr_z_mean[kMaxgr]={};
+Double_t gr_mean_path[kMaxgr]={};
+Double_t gr_rms_path[kMaxgr]={};
+Double_t gr_max_path[kMaxgr]={};
+Double_t gr_phi_mean[kMaxgr]={};
+Double_t gr_x_maxbar[kMaxgr]={};
+Double_t gr_y_maxbar[kMaxgr]={};
+Double_t gr_x_minbar[kMaxgr]={};
+Double_t gr_y_minbar[kMaxgr]={};
+Double_t gr_npx_sum[kMaxgr]={};
+Double_t gr_vol_sum[kMaxgr]={};
+Double_t gr_ncl_sum[kMaxgr]={};
+Double_t gr_path[kMaxgr]={};
+Double_t gr_gap[kMaxgr]={};
+Double_t chi2_pol[kMaxgr]={};
+Double_t phi_set[kMaxgr]={};
+Double_t phi_set_bar[kMaxgr]={};
+Double_t the_set_bar[kMaxgr]={};
+Double_t phi_set_fit[kMaxgr]={};
+Double_t gr_max_dist[kMaxgr]={};
+Double_t gr_max_dist_bar[kMaxgr]={};
+Double_t gr_maxpol1[kMaxgr]={};
+Double_t gr_maxpol2[kMaxgr]={};
+Double_t gr_isolated[kMaxgr]={};
+Double_t gr_gap_z[kMaxgr]={};
+Double_t gr_gap_z2[kMaxgr]={};
+Double_t q_line[kMaxgr]={};
+Double_t m_line[kMaxgr]={};
+Double_t gr_max_amp[kMaxgr]={};
+Double_t maxpixdist[kMaxgr]={};
+Int_t set_first[kMaxgr]={};
+Int_t gr_fr[kMaxgr]={};
+Int_t set_fr[kMaxgr]={};
+Double_t mt_dif_vol[kMaxgr]={};
+Double_t phi_mt[kMaxgr]={};
+int frbf_ent[kMaxgr][npol]={};
+double cut_area[kMaxgr][nsides]={};   
+double cut_area2[kMaxgr][nsides]={};   
+double ld_area[kMaxgr][nsides]={};   
+Bool_t mtrk[kMaxmt]={};
+
+Double_t xb_frbf[kMaxgr][npol]={};
+Double_t yb_frbf[kMaxgr][npol]={};
+Double_t vol_frbf[kMaxgr][npol]={};
+Double_t npx_frbf[kMaxgr][npol]={};
+Double_t cl_x_pos[kMaxgr][npol]={};
+Double_t cl_y_pos[kMaxgr][npol]={};
+Double_t cl_z_pos[kMaxgr][npol]={};
+Int_t same_frame[kMaxgr][npol]={};  
+Int_t ipol_gr[kMaxgr][npol]={};
+/////////////////////////
+
+
+DMRRun         *aRun;
+DMRView        *view;
+DMRImageCl     *image;
+
+myData vv;
+
+TH2F *merged_histo(DMRRun *aRun, DMRView *view, int iv, int igr, int *clset)
+{
+
+  const int dr=50;
+  float pixX = aRun->GetHeader()->pixX;
+  float pixY = aRun->GetHeader()->pixY;
+  int nx     = aRun->GetHeader()->npixX;
+  int ny     = aRun->GetHeader()->npixY;
+  int x0,y0;
+
+  int tmp_max=0;
+  int tmp_min=255;
+
+  int tmp_max2=-255;
+  int tmp_min2=255;
+
+  
+  const int ncp=8;
+
+
+  TH2F *hsum = new TH2F();
+  hsum=0;
+  TH2F *h[ncp];
+  DMRImage imin; imin.SetImage( 2*dr, 2*dr );
+  DMRImage imax; imax.SetImage( 2*dr, 2*dr );
+
+  for(int i=0;i<ncp;i++){
+    h[i]= new TH2F("","",2*dr,0,dr,2*dr,0,dr);
+    if(clset[i]!=-1){
+      DMRImageCl *im    = aRun->GetCLIM(iv,clset[i],i,dr);
+      if(im){
+	h[i] = im->GetHist2();
+	if(h[i]->GetMaximum()>tmp_max)tmp_max = h[i]->GetMaximum();
+	if(h[i]->GetMinimum()<tmp_min)tmp_min = h[i]->GetMinimum();
+      }
+      delete im;
+    }
+  }
+  
+  for(int i=0;i<ncp;i++){
+
+    if(clset[i]!=-1){
+      
+      DMRViewHeader   *hd = view->GetHD();
+      DMRCluster      *cl = view->GetCL(clset[i]);
+      DMRFrame        *frcl = view->GetFR(cl->ifr);       
+      DMRFrame        *fr  = view->GetFR(frcl->iz,frcl->ipol);
+      
+      if(i==0){
+	x0 = ((cl->x+hd->x)-fr->x)/pixX + nx/2;
+	y0 = ((cl->y+hd->y)-fr->y)/pixY + ny/2;
+      }
+    
+      DMRImageCl *im    = aRun->GetCLIMBFC(iv,clset[i],i,dr,x0,y0);
+      if(im){
+	h[i] = im->GetHist2();
+	//cout << i << " " << h[i]->GetMaximum() << endl;
+	if(!hsum){
+	  hsum = (TH2F*)(h[i]->Clone("hsum"));
+	  hsum->SetTitle(Form("Sum over all polarizations"));
+	  hsum->SetName(Form("hsum"));
+	  imin.Max(*im);
+	  imax.Max(*im);
+	}
+	else {
+	  hsum->Add(h[i]);
+	  imin.Min(*im);
+	  imax.Max(*im);
+	  //cout << "sum "<< hsum->GetMaximum() << endl;
+	}
+      }
+      delete im;
+      //delete hd;
+      //delete cl;
+      //delete frcl;
+      //delete fr;
+    }
+    delete h[i];
+  }
+  hsum->Scale(1./8.);
+  //delete view;
+  return hsum;
+  delete hsum;
+}
+
+
+
+void gr_spectrum(TH2F *h, double *gr_scale_result)
+{
+  int nbinsX;
+  int nbinsY; 
+  double cont=0;
+  Double_t bkg_mean=0;
+  Double_t sig_peak=0;
+
+  TH1F *hspect = new TH1F("hspect","hs",255,0,255);
+
+  nbinsX = h->GetNbinsX();
+  nbinsY = h->GetNbinsY();
+    
+  for(int i=0;i<nbinsX;i++){
+    for(int j=0;j<nbinsY;j++){
+      cont = h->GetBinContent(i+1,j+1);
+      if(cont>0)hspect->Fill(cont);
+    }
+  }
+  
+  if(hspect->GetEntries()!=0){
+    hspect->Fit("gaus","Q");
+    TF1 *gaus = hspect->GetFunction("gaus");
+    bkg_mean = gaus->GetParameter(1);
+    sig_peak = h->GetMaximum();
+  }
+  else {
+    bkg_mean=-1;
+    sig_peak=-1;
+  }
+  
+  gr_scale_result[0]=bkg_mean;
+  gr_scale_result[1]=sig_peak;
+  
+  //delete h;
+  delete hspect;
+}
+
+
+
+
+void scaling(DMRRun *aRun, int iv, int icl, int ipol, double *scale_result)
+{
+
+  double br[6] = {20,35,50,65,80,95};
+  double r0[6] = {1.076,1.157,1.185,1.184,1.215,1.229};
+  double r1[6] = {1.043,1.103,1.084,1.086,1.106,1.083};
+  double r2[6] = {0.996,1.013,0.962,0.947,0.973,0.973};
+  double r3[6] = {0.953,0.884,0.862,0.878,0.878,0.878};
+  double r4[6] = {0.947,0.886,0.869,0.872,0.889,0.889};
+  double r5[6] = {0.977,0.980,0.947,0.963,0.961,0.961};
+  double r6[6] = {1.024,1.077,1.075,1.082,1.109,1.082};
+  double r7[6] = {1.064,1.140,1.150,1.174,1.206,1.237};
+
+  double brM[8][6];
+ 
+  for(int j=0;j<6;j++){
+    brM[0][j]=r0[j];
+    brM[1][j]=r1[j];
+    brM[2][j]=r2[j];
+    brM[3][j]=r3[j];
+    brM[4][j]=r4[j];
+    brM[5][j]=r5[j];
+    brM[6][j]=r6[j];
+    brM[7][j]=r7[j];
+  }
+
+  
+  int nbinsX;
+  int nbinsY; 
+  double cont=0;
+  Double_t bkg_mean=0;
+  Double_t sig_peak=0;
+  double cont_S=0;
+  Double_t bkg_mean_S=0;
+  Double_t sig_peak_S=0;
+  //float w[8] = {1,0.957,0.909,0.881,0.887,0.918,0.962,0.996};
+  int dr=50;
+  TH2F *h=0;
+  TH2F *hs=0;
+  TH1F *hspect = new TH1F("hspect","hs",255,0,255);
+  TH1F *hspect_S = new TH1F("hspect_S","hs_S",255,0,255);
+  hspect->Reset(0);
+  hspect_S->Reset(0);
+  DMRImageCl *im    = aRun->GetCLIM(iv,icl,ipol,dr);
+  
+  if(im){
+    h = im->GetHist2();
+    hs = im->GetHist2();    
+
+    for(int k=0;k<6;k++){
+      if(k==0){
+	if(hs->GetMaximum()<br[1])hs->Scale(1./brM[ipol][0]);
+      }
+      if(k>0 && k<5){
+	if(hs->GetMaximum()>=br[k] && hs->GetMaximum()<br[k+1])hs->Scale(1./brM[ipol][k]);
+      }
+      if(k==5){
+	if(hs->GetMaximum()>=br[5])hs->Scale(1./brM[ipol][5]);
+      }
+    }
+
+    nbinsX = h->GetNbinsX();
+    nbinsY = h->GetNbinsY();
+    
+    //if(icl==168) cout <<"hello1 "<< scale_result[0] << " " << scale_result[1] << " " << scale_result[2] << " " << scale_result[3] << endl;
+    for(int i=0;i<nbinsX;i++){
+      for(int j=0;j<nbinsY;j++){
+	cont = h->GetBinContent(i+1,j+1);
+	if(cont>0)hspect->Fill(cont);
+	cont_S = hs->GetBinContent(i+1,j+1);
+	if(cont_S>0)hspect_S->Fill(cont_S);
+      }
+    }
+    
+    if(hspect->GetEntries()!=0){
+      hspect->Fit("gaus","Q");
+      TF1 *gaus = hspect->GetFunction("gaus");
+      bkg_mean = gaus->GetParameter(1);
+      sig_peak = h->GetMaximum();
+    }
+    else {
+      bkg_mean=-1;
+      sig_peak=-1;
+    }
+    if(hspect_S->GetEntries()!=0){
+      hspect_S->Fit("gaus","Q");
+      TF1 *gaus_S = hspect_S->GetFunction("gaus");
+      bkg_mean_S = gaus_S->GetParameter(1);
+      sig_peak_S = hs->GetMaximum();
+    }
+    else {
+      bkg_mean_S=-1;
+      sig_peak_S=-1;
+    }
+  }
+  else{
+    bkg_mean=-1;
+    sig_peak=-1;
+    bkg_mean_S=-1;
+    sig_peak_S=-1;
+  }
+
+  scale_result[0]=bkg_mean;
+  scale_result[1]=sig_peak;
+  scale_result[2]=bkg_mean_S;
+  scale_result[3]=sig_peak_S;
+
+    
+  
+  delete im;  
+  delete h;
+  delete hspect;
+  delete hs;
+  delete hspect_S;
+  
+}
+
+
+void myDatacard(char* datacard){
+  ifstream myfile(datacard);
+  vector<vector<string> > runDescription;
+  if (myfile.is_open()){
+    string line;
+    // cout << line << endl;
+    while (getline (myfile,line)){
+      istringstream iss(line);
+      string a;
+      vector<string> tmpS;
+      while(!iss.eof()){     
+	iss>>a;
+	tmpS.push_back(a);
+	//cout << a << " ";
+      }
+      runDescription.push_back(tmpS);
+      tmpS.clear();
+    }
+    myfile.close();
+    
+  }
+  else cout << "Unable to open file: "<< datacard << endl; 
+
+  cout << "SETTINGS from " << datacard << endl;
+  for(int i = 0; i< runDescription.size();i++){
+    int nstring  = runDescription[i].size();
+    // cout << endl;
+    for(int j = 0; j<nstring; j++){
+      //cout << runDescription[i][j]<<endl;
+      if(runDescription[i][j] == "pix_size_x") {
+	x_pix_size = atof( runDescription[i][2].c_str());
+	cout << "pixel size x [um] is " << x_pix_size << endl;
+      }
+      if(runDescription[i][j] == "pix_size_y") {
+	y_pix_size = atof( runDescription[i][2].c_str());
+	cout << "pixel size y [um] is "<< y_pix_size << endl;
+      }
+      if(runDescription[i][j] == "thr_ldust_br") {
+	thr_ldust_br = atof( runDescription[i][2].c_str());
+	cout << "threshold brigthness for large dust  (log10 scale) is " << thr_ldust_br << endl;
+      }
+      if(runDescription[i][j] == "thr_ldust_area") {
+	thr_ldust_area = atof( runDescription[i][2].c_str());
+	cout << "threshold number of pixel for large dust (log 10 scale) is " << thr_ldust_area << endl;
+      }
+      if(runDescription[i][j] == "fid_cut_par") {
+	fid_cut_par = atof( runDescription[i][2].c_str());
+	cout << "fiducial cut parameter for nearby large dust (unit of large dust area) is "<< fid_cut_par << endl;
+      }
+      if(runDescription[i][j] == "maxcl") {
+	maxcl = atof( runDescription[i][2].c_str());
+	cout << "max cluster number per view to start the  analysis (no dirty view control) is "<< maxcl << endl;
+      }
+      /*if(runDescription[i][j] == "npol") {
+	npol = atof( runDescription[i][2].c_str());
+	cout << "max number of polarization angles (excluding 180°) is "<< npol << endl;
+	} */
+    }
+  }
+}
+
+void myData::Loop()
+{
+
+  /////////////  SETTINGS  ARGUMENT /////////////////////////////////////////////////        
+  char datacard[100]="settings.mac";
+  //cout << "Type the settings macro [settings.mac or settings_ini.mac or ls from shell]" << endl;
+  //cout << "Enter some text here: ";
+  // cin >> datacard;
+  cout << "You are using: " << datacard << "\n\n";
+  myDatacard(datacard);
+  cout << "PAY ATTENTION 1" << endl;
+  cout << "max number of polarization angles (excluding 180°) is "<< npol << endl;
+  cout << "If the number of polarizations is changed please fix in 'myData_vx.C'" << endl;
+  cout << "PAY ATTENTION 2" << endl;
+  cout << "The fiducial cut parameter has to be checked in the histo 'r_dist_ldust'" << endl;
+  cout << "If it is not correct please change 'fid_cut_par' in 'settings.mac'" << endl; 
+  cout << "End of settings (enjoy the results)" << "\n\n";
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  const char *file="dm_tracks_cl.dm.root";
+  aRun = new DMRRun(file);
+  aRun->SetFixEncoderFaults(1);
+  view = aRun->GetView();
+
+  //// LOG OUTPUT
+  ofstream mybfcl("pred_bfcl.txt");    /// lista bfcl per ogni grano
+  ofstream bfcl8("bfcl8copy.txt");     /// lista bfcl (solo 8pol) per funzioni immagini animate
+
+  /// HISTOGRAMS 
+  TH1F * hrdist = new TH1F("rdist","",256,0,20);  // distanza mutua tra grani dopo i cuts primari (ldust, nearby ldust, no_ell_fit, minor_cut, long_chains)
+  TH1F * hrdist2 = new TH1F("rdist2","",128,0,1); // distanza tra i picchi dei grani npeaks
+  TH1F * hrdist_ldust = new TH1F("rdist_ldust","",10000,0,500); // distanza di ogni grano no large dust dai grani di large dust (espressa in unità di raggio del large dust)
+  TGraph * grNcl = new TGraph(); // ncl per view
+  grNcl->SetName("ncl_per_view");
+
+  //// DATA OUTPUT
+  TFile * f_out = new TFile("debug6_test_grain.root","RECREATE");
+  TTree * Tree_out = new TTree("tree1","data");
+  
+  Tree_out->Branch("eViewID",&eViewID,"eViewID/I");
+  Tree_out->Branch("eGrainID",&eGrainID,"eGrainID/I");
+  Tree_out->Branch("ePolID",&ePolID,"ePolID/I");
+  Tree_out->Branch("eBfcID",&eBfcID,"eBfcID/I");
+  Tree_out->Branch("eBfcPolID",&eBfcPolID,"eBfcPolID/I");
+  Tree_out->Branch("eBfcGap",&eBfcGap,"eBfcGap/I");
+  Tree_out->Branch("eBfcSigPeak",&eBfcSigPeak,"eBfcSigPeak/D");
+  Tree_out->Branch("eBfcMeanBkg",&eBfcMeanBkg,"eBfcMeanBkg/D");
+  Tree_out->Branch("eBfcWeigth",&eBfcWeigth,"eBfcWeigth/D");
+  Tree_out->Branch("eSclSigPeak",&eSclSigPeak,"eSclSigPeak/D");
+  Tree_out->Branch("eSclMeanBkg",&eSclMeanBkg,"eSclMeanBkg/D");
+  Tree_out->Branch("eGrSigPeak",&eGrSigPeak,"eGrSigPeak/D");
+  Tree_out->Branch("eGrMeanBkg",&eGrMeanBkg,"eGrMeanBkg/D");
+  //Tree_out->Branch("eGrWeigth",&eGrWeigth,"eGrWeigth/D");
+  Tree_out->Branch("eGrSclSigPeak",&eGrSclSigPeak,"eGrSclSigPeak/D");
+  Tree_out->Branch("eGrSclMeanBkg",&eGrSclMeanBkg,"eGrSclMeanBkg/D");
+  Tree_out->Branch("eNcl",&eNcl,"eNcl/I");
+  Tree_out->Branch("eNgr",&eNgr,"eNgr/I");
+  Tree_out->Branch("eNclFr",&eNclFr,"eNclFr/I");
+  Tree_out->Branch("eGrainx",&eGrainx,"eGrainx/D");
+  Tree_out->Branch("eGrainy",&eGrainy,"eGrainy/D");
+  Tree_out->Branch("eGrainz",&eGrainz,"eGrainz/D");
+  Tree_out->Branch("eClustx",&eClustx,"eClustx/D");
+  Tree_out->Branch("eClusty",&eClusty,"eClusty/D");
+  Tree_out->Branch("eClustz",&eClustz,"eClustz/D");
+  Tree_out->Branch("ePuls",&ePuls,"ePuls/I");
+  Tree_out->Branch("eGrainMin",&eGrainMin,"eGrainMin/D");
+  Tree_out->Branch("eGrainMaj",&eGrainMaj,"eGrainMaj/D");
+  Tree_out->Branch("eGrainEll",&eGrainEll,"eGrainEll/D");
+  Tree_out->Branch("eGrainPhi",&eGrainPhi,"eGrainPhi/D");
+  Tree_out->Branch("eGrainTheta",&eGrainTheta,"eGrainTheta/D");
+  Tree_out->Branch("eGoodZone",&eGoodZone,"eGoodZone/B");
+  Tree_out->Branch("eLargeDust",&eLargeDust,"eLargeDust/B");
+  Tree_out->Branch("eClustTypeDust",&eClustTypeDust,"eClustTypeDust/B");
+  Tree_out->Branch("eVolume",&eVolume,"eVolume/D");
+  Tree_out->Branch("eBfcVolume",&eBfcVolume,"eBfcVolume/D");
+  Tree_out->Branch("eFrBfVolume",&eFrBfVolume,"eFrBfVolume/D");
+  Tree_out->Branch("eArea",&eArea,"eArea/D");
+  Tree_out->Branch("eBfcArea",&eBfcArea,"eBfcArea/D");
+  Tree_out->Branch("eFrBfArea",&eFrBfArea,"eFrBfArea/D");
+  Tree_out->Branch("eGrainArea",&eGrainArea,"eGrainArea/D");
+  Tree_out->Branch("eXView",&eXView,"eXView/D");
+  Tree_out->Branch("eYView",&eYView,"eYView/D");
+  Tree_out->Branch("eZ",&eZ,"eZ/D");
+  Tree_out->Branch("eZlen",&eZlen,"eZlen/D");
+  Tree_out->Branch("eNFrame",&eNFrame,"eNFrame/I");
+  Tree_out->Branch("eSetFrame",&eSetFrame,"eSetFrame/I");
+  Tree_out->Branch("eSetNCopy",&eSetNCopy,"eSetNCopy/I");
+  Tree_out->Branch("eSetXRms",&eSetXRms,"eSetXRms/D");
+  Tree_out->Branch("eSetYRms",&eSetYRms,"eSetYRms/D");
+  Tree_out->Branch("eSetXBar",&eSetXBar,"eSetXBar/D");
+  Tree_out->Branch("eSetYBar",&eSetYBar,"eSetYBar/D");
+  Tree_out->Branch("eSetXMaxBar",&eSetXMaxBar,"eSetXMaxBar/D");
+  Tree_out->Branch("eSetYMaxBar",&eSetYMaxBar,"eSetYMaxBar/D");
+  Tree_out->Branch("eSetXMinBar",&eSetXMinBar,"eSetXMinBar/D");
+  Tree_out->Branch("eSetYMinBar",&eSetYMinBar,"eSetYMinBar/D");
+  //Tree_out->Branch("eSetPhiRms",&eSetPhiRms,"eSetPhiRms/D");
+  Tree_out->Branch("eSetTwoPeakDist",&eSetTwoPeakDist,"eSetTwoPeakDist/D");
+  Tree_out->Branch("eSetTwoPeakPhi",&eSetTwoPeakPhi,"eSetTwoPeakPhi/D");
+  Tree_out->Branch("eSetTwoPeakDVol",&eSetTwoPeakDVol,"eSetTwoPeakDVol/D");
+  Tree_out->Branch("eSetTwoPeakDNpx",&eSetTwoPeakDNpx,"eSetTwoPeakDNpx/D");
+  Tree_out->Branch("eSetTwoPeakDBri",&eSetTwoPeakDBri,"eSetTwoPeakDBri/D");
+  Tree_out->Branch("eSetGapZ",&eSetGapZ,"eSetGapZ/D");
+  Tree_out->Branch("eSetGapZ2",&eSetGapZ2,"eSetGapZ2/D");
+  Tree_out->Branch("eSetGap",&eSetGap,"eSetGap/D");
+  Tree_out->Branch("eSetPath",&eSetPath,"eSetPath/D");
+  Tree_out->Branch("eSetMeanPath",&eSetMeanPath,"eSetMeanPath/D");
+  Tree_out->Branch("eSetRmsPath",&eSetRmsPath,"eSetRmsPath/D");
+  Tree_out->Branch("eSetMaxPath",&eSetMaxPath,"eSetMaxPath/D");
+  Tree_out->Branch("eSetMaxDist",&eSetMaxDist,"eSetMaxDist/D");
+  Tree_out->Branch("eSetMaxPol1",&eSetMaxPol1,"eSetMaxPol1/D");
+  Tree_out->Branch("eSetMaxPol2",&eSetMaxPol2,"eSetMaxPol2/D");
+  Tree_out->Branch("eSetMaxBar",&eSetMaxBar,"eSetMaxBar/D");
+  Tree_out->Branch("eSetMaxAmp",&eSetMaxAmp,"eSetMaxAmp/D");
+  Tree_out->Branch("eSetPhi",&eSetPhi,"eSetPhi/D");
+  Tree_out->Branch("eSetPhiBar",&eSetPhiBar,"eSetPhiBar/D");
+  Tree_out->Branch("eSetTheBar",&eSetTheBar,"eSetTheBar/D");
+  Tree_out->Branch("eSetMeanBright",&eSetMeanBright,"eSetMeanBright/D");
+  Tree_out->Branch("eIsolated",&eIsolated,"eIsolated/D");
+  Tree_out->Branch("eSetNpxRms",&eSetNpxRms,"eSetNpxRms/D");
+  Tree_out->Branch("eSetVolRms",&eSetVolRms,"eSetVolRms/D");
+  Tree_out->Branch("eSetVolRatio",&eSetVolRatio,"eSetVolRatio/D");
+  Tree_out->Branch("eMTrk",&eMTrk,"eMTrk/I");
+  Tree_out->Branch("eMTGr",&eMTGr,"eMTGr/I");
+  Tree_out->Branch("eMTNfr",&eMTNfr,"eMTNfr/I");
+  Tree_out->Branch("eMTPhi",&eMTPhi,"eMTPhi/D");
+  Tree_out->Branch("eMTThe",&eMTThe,"eMThe/D"); 
+  Tree_out->Branch("eMTLen",&eMTLen,"eMTLen/D");
+  Tree_out->Branch("eMTVolDif",&eMTVolDif,"eMTVolDif/D"); 
+  /////////////////////////////////////////////////////////
+
+  /// READ INPUT FILE
+  Long64_t nentries = fChain->GetEntries();
+
+  for (Long64_t jentry=0; jentry<nentries;jentry++) { // su tutte le View
+    //for (Long64_t jentry=6; jentry<7/*nentries*/;jentry++) { // su tutte le View
+
+
+    /////// TIPO DI SCANNING /////////    
+    if(jentry==0){
+      for(int a=0;a<5;a++){  // mi occorrono poche view per capire il tipo di scansione
+	GetEntry(a);
+	Long64_t aa = LoadTree(a);
+	sum_vid +=vid;
+	sum_aid +=aid;
+	//cout << aid << " " << vid << " " << viewID << endl;
+      }
+    }
+    ////////////////////////// end
+
+    //cout << aid << " " << vid << " " << viewID << endl;
+    
+    GetEntry(jentry);
+    Long64_t ientry = LoadTree(jentry);
+
+    if(sum_vid!=0)viewID=vid;
+    else viewID=aid;
+
+    grNcl->SetPoint(jentry,viewID,ncl);
+    
+    if(ncl<maxcl){   /// cut per view troppo sporche (maxcl va settato)   evita i CRASH
+      cout << jentry << " " << ncl << endl;
+    
+      ///////// SEARCH ENCODING FAULTS
+      Double_t cl_x2[ncl]={};
+      Double_t cl_y2[ncl]={};
+
+      for(int jn=0; jn<cl_;jn++){
+	if(jn==0){
+	  cl_x2[jn]=cl_x[jn];
+	  cl_y2[jn]=cl_y[jn];
+	}
+	if(jn!=0){
+	  if(fr_x[cl_ifr[jn]]!=fr_x[cl_ifr[0]]) cl_x2[jn]=cl_x[jn] - (fr_x[cl_ifr[jn]]-fr_x[cl_ifr[0]]);
+	  else cl_x2[jn]=cl_x[jn];
+	  
+	  if(fr_y[cl_ifr[jn]]!=fr_y[cl_ifr[0]]) cl_y2[jn]=cl_y[jn] - (fr_y[cl_ifr[jn]]-fr_y[cl_ifr[0]]);
+	  else cl_y2[jn]=cl_y[jn];
+	}
+      }
+      ///////////////////////////
+
+      //// INIZIALIZATIONS
+      for(int in=0; in<gr_;in++){
+	for(int jn=0;jn<npol;jn++){
+	  xb_frbf[in][jn]=0;
+	  yb_frbf[in][jn]=0;
+	  vol_frbf[in][jn]=0;
+	  npx_frbf[in][jn]=0;
+	  same_frame[in][jn]=-1;
+	  ipol_gr[in][jn]=-1;
+	  frbf_ent[in][jn]=0;
+	}
+	mtrk[gr_imt[in]]=false;
+	mt_dif_vol[in]=-1;
+	phi_mt[in]=-10;
+	twopeak_dist[in]=-1;
+	twopeak_dnpx[in]=-1;
+	twopeak_dvol[in]=-1;
+	twopeak_dbri[in]=-1;
+	twopeak_phi[in]=10;
+	bfc_gap[in]=-1;
+      }
+    
+      /////////////////// PARTE 1: CARATTERIZZAZIONE DEI SINGOLI GRANI RICOSTRUITI ////////////////////////////////////////////////////////////////////
+
+      for(int in=0; in<gr_;in++){
+	//for(int in=20; in<21/*gr_*/;in++){
+	//// inizialization
+
+	//for(int jpol=0;jpol<npol;jpol++){
+	//ipol_gr[in][jpol]=-1;
+	//}
+
+	//// INIZIALIZATIONS GRAINS
+	tmp_gap=-1;
+	tmp_gr=-1;    
+	dist_cl_gr[in]=0;
+	grain[in]=true;
+	ctd[in]=false;
+	ldust[in]=false;
+	bfc_border[in]=false;
+	index_clust=0;      
+	n_ifr=1;
+	//fiducial_cut=fid_cut_par*TMath::Sqrt((gr_npx[in]/gr_ncl[in])/(TMath::Pi()))*((x_pix_size-y_pix_size)/2.);
+      
+	//cout << fiducial_cut << endl;
+	Int_t tcl_gr = gr_ncl[in]*npol;       
+	Double_t *x_ldust = new Double_t[tcl_gr];
+	Double_t *y_ldust = new Double_t[tcl_gr];
+	Double_t *z_ldust = new Double_t[tcl_gr];
+	Double_t *lx_ldust = new Double_t[tcl_gr];
+	Double_t *ly_ldust = new Double_t[tcl_gr];
+	Double_t *phi_ldust = new Double_t[tcl_gr];
+	Double_t *area_ldust = new Double_t[tcl_gr];     
+	TString chain;
+	ostringstream frame;
+
+	Double_t tmp_vol[npol]={-1,-1,-1,-1,-1,-1,-1,-1};
+	Int_t bfc_ifr[npol]={-1,-1,-1,-1,-1,-1,-1,-1};
+	Int_t bfc_zfr[npol]={-1,-1,-1,-1,-1,-1,-1,-1};
+	Int_t tmp_same_frame[npol]={-1,-1,-1,-1,-1,-1,-1,-1};
+	////////////////// end
+
+            
+	/// start cluster
+	for(int jn=0; jn<cl_;jn++){ //loop sui clusters
+	  //if(cl_igr[jn]==gr_id[in])cout  << gr_id[in] << " " << cl_igr[jn] <<  " " << cl_flags[jn] << " " << cl_ipol[jn] << endl;
+	  ///////////////////////// start if cluster-grain
+	  if(cl_igr[jn]==gr_id[in]  && cl_flags[jn]==0){  // clusters appartenenti all'iesimo grano e non mergiati, quindi collegati a specifica polarizzazione
+	  
+	    ////// MAX BRIGHTNESS PER OGNI POLARIZZAZIONE  (CERCA IL BFC DEL GRANO PER OGNI POL) --> BFC definito come il più luminoso
+	    if((cl_vol[jn]/cl_npx[jn])>tmp_vol[cl_ipol[jn]]){
+	      tmp_vol[cl_ipol[jn]]=cl_vol[jn]/cl_npx[jn];
+	      ipol_gr[in][cl_ipol[jn]]=cl_id[jn];
+	      //cout << in << " " << " " << cl_ipol[jn] << " " << ipol_gr[in][cl_ipol[jn]] << " " << fr_iz[cl_ifr[ipol_gr[in][cl_ipol[jn]]]] <<  endl;
+	      //////////// FRAME DEL BEST FOCUS CLUSTER PER OGNI POL 
+	      bfc_ifr[cl_ipol[jn]]=cl_ifr[ipol_gr[in][cl_ipol[jn]]];              // frame
+	      bfc_zfr[cl_ipol[jn]]=fr_iz[cl_ifr[ipol_gr[in][cl_ipol[jn]]]];       // zeta
+	    }
+	    /////////////////////////////////////
+	  
+	  
+	    ////////  MARGINI DEI GRANI   (LOOP SU TU TUTTI I CLUSTER COLLEGATI) --> i cluster di un grano formano un reticolo 
+	    if(index_clust==0){
+	      ld_area[in][0]=cl_x2[jn];
+	      ld_area[in][1]=cl_y2[jn];
+	      ld_area[in][2]=cl_x2[jn];
+	      ld_area[in][3]=cl_y2[jn];
+	    }
+	    else{
+	      if(cl_x2[jn]<ld_area[in][0])ld_area[in][0]=cl_x2[jn];
+	      if(cl_y2[jn]<ld_area[in][1])ld_area[in][1]=cl_y2[jn];
+	      if(cl_x2[jn]>ld_area[in][2])ld_area[in][2]=cl_x2[jn];
+	      if(cl_y2[jn]>ld_area[in][3])ld_area[in][3]=cl_y2[jn];
+	    }
+	    index_clust++;	  
+	  }  /// end if-cluster grain
+	
+	  ///// eGAP  (DISCREPANZA 0° E 180°)  /// DA VERIFICARE
+	  if(cl_igr[jn]==gr_id[in]  && cl_flags[jn]==2){   // cluster del grano con polarizzazione 180° (ovvero ripetizione di 0°)
+	    if((cl_vol[jn]/cl_npx[jn])>tmp_gap){   // prendo il più luminoso tra essi
+	      tmp_gap=cl_vol[jn]/cl_npx[jn];
+	      gr_180[in]=cl_id[jn];  
+	    }
+	  }
+	  //////////////////////// end if clust-grain 
+	} // end cluster
+
+      
+	///////  CENTRO E RAGGIO DEL GRANO RICOSTRUITO
+	grain_Ox[in]=(ld_area[in][2]+ld_area[in][0])/2.;
+	grain_Oy[in]=(ld_area[in][3]+ld_area[in][1])/2.;
+	grain_rx[in]=(ld_area[in][2]-ld_area[in][0])/2.;
+	grain_ry[in]=(ld_area[in][3]-ld_area[in][1])/2.;
+	grain_area[in]=(ld_area[in][2]-ld_area[in][0])*(ld_area[in][3]-ld_area[in][1]);
+	fiducial_cut=fid_cut_par*TMath::Sqrt(grain_area[in]/TMath::Pi());//*((x_pix_size-y_pix_size)/2.);
+	////////////////////////////////////////////////////
+
+      
+	////// MARGINI NEARBY LARGE DUST   (FATTO SUL BFC DEL GRANO)
+	if(TMath::Log10(cl_vol[gr_ibfc[in]]/cl_npx[gr_ibfc[in]])>thr_ldust_br || TMath::Log10(cl_npx[gr_ibfc[in]])>thr_ldust_area){
+	  ldust[in]=true;
+	  cut_area[iLarge_dust][0]=grain_Ox[in]+x-fiducial_cut;
+	  cut_area[iLarge_dust][1]=grain_Oy[in]+y-fiducial_cut;
+	  cut_area[iLarge_dust][2]=grain_Ox[in]+x+fiducial_cut;
+	  cut_area[iLarge_dust][3]=grain_Oy[in]+y+fiducial_cut;
+	  //cout << gr_x[in] << " " << cut_area[iLarge_dust][0] << " " << iLarge_dust << endl;
+	  iLarge_dust++;
+	}
+	/////////// end MARGINI NEARBY LARGE DUST
+      
+	delete [] x_ldust;
+	delete [] y_ldust;
+	delete [] z_ldust;
+	delete [] lx_ldust;
+	delete [] ly_ldust;
+	delete [] phi_ldust;
+	delete [] area_ldust;
+
+      
+	//// eGoodZone (SOLO GRANI LONTANI DAI LARGE DUST)
+	// su tutti i grani di una View
+	if(!ldust[in]){
+	  for(int jn=0;jn<iLarge_dust;jn++){
+	    if(gr_x[in]+x>=cut_area[jn][0] && gr_x[in]+x<=cut_area[jn][2] && gr_y[in]+y>=cut_area[jn][1] && gr_y[in]+y<=cut_area[jn][3])
+	      grain[in]=false;   // near large dust
+	  }
+	} else grain[in]=false;   // is a large dust
+	//// end eGoodZone 
+
+
+	/////////  NUMERO DI POLARIZZAZIONI IN UN GRANO 
+	Int_t nCopy=npol;
+	for(int jn=0;jn<npol;jn++){
+	  if(ipol_gr[in][jn]==-1)nCopy--;
+	}
+	//cout << nCopy << endl;
+	///// end
+      
+	///// GAP Z (VIBRATION OR ENCODER FAULTS AND BFCFR GAP) //////////////////////
+	Double_t zbfcl[nCopy]={};
+	Int_t iCopy=0;
+	for(int jn=0;jn<npol;jn++){
+	  if(ipol_gr[in][jn]!=-1){
+	    zbfcl[iCopy]=fr_z[cl_ifr[ipol_gr[in][jn]]];
+	    //cout << in << " " << " " << iCopy << " " << ipol_gr[in][jn] << " " << fr_z[cl_ifr[ipol_gr[in][jn]]] <<  " " << zbfcl[iCopy] << endl;
+	    iCopy++;
+	  }
+	}
+	gr_gap_z[in] = TMath::MaxElement(nCopy,zbfcl) - TMath::MinElement(nCopy,zbfcl);
+	//cout << gr_gap_z[in] << endl;
+	////////////////////////////////////////////////////////////////
+      
+      
+	///// CORRECTION OF BFC FRAME //////////////////////////////////  (correggo i frame con diverso zeta rispetto alla popolazione dominante)
+	Int_t tmp_nfr[npol]={0,0,0,0,0,0,0,0};
+	Int_t tmp_clfr[npol]={-1,-1,-1,-1,-1,-1,-1,-1};
+	Int_t ifr=0;
+      
+	for(int jn=0;jn<npol;jn++){
+	  //cout << in << " " << " " << jn << " " << ipol_gr[in][jn] << " " << fr_iz[cl_ifr[ipol_gr[in][jn]]] <<  endl;
+	  bool match_fr=false;               // booleano
+	  if(ipol_gr[in][jn]!=-1 && jn==0){  // se la polarizzazione è 0
+	    tmp_clfr[ifr]=bfc_zfr[jn];       // il tmp frz è il bfczfr di 0
+	    tmp_nfr[ifr]++;                  // è di partenza sempre 1 (numero di frame uguali)
+	    //cout << in << " " << jn << " " << bfc_fr[jn] << " " << tmp_clfr[ifr] <<  " " << tmp_nfr[jn] << endl;
+	    ifr++;                           // numero di frame tra i bfcfr (iframe diventa 1 (numero minimo di frame))
+	  }
+	  for(int kn=0;kn<ifr;kn++){         
+	    if(ipol_gr[in][jn]!=-1 && jn>0 && bfc_zfr[jn]==tmp_clfr[kn]){  // solo pol diverse da 0 e con frame uguale al frame della pol jn-esima
+	      tmp_nfr[kn]++;    // conta numero di frame uguali al frame della polarizzazione iesima, quando è uguale match_fr diventa true
+	      match_fr=true;
+	      //cout << in << " " << jn << " " << kn << " " << bfc_fr[jn] << " " << tmp_clfr[kn] << " " << tmp_nfr[kn] << endl;
+	    }
+	  }
+	  if(ipol_gr[in][jn]!=-1 && jn>0 && !match_fr){   // solo se match_fr è falso, cioè se diverso dal frame 0, guardo i frame successivi
+	    ifr++;                                        // incrementa
+	    tmp_clfr[ifr]=bfc_zfr[jn];                    // nuovo frame nel tmp
+	    tmp_nfr[ifr]++;                               // tmp frame è 1 (molteplicità minima)
+	    //cout << in << " " << jn << " " << bfc_fr[jn] <<  " " << tmp_clfr[ifr] << " " << tmp_nfr[ifr] << endl;
+	  }
+	}
+
+	Int_t fr_sort[npol]={-1,-1,-1,-1,-1,-1,-1,-1};   // fr_sort ordina in ordine decrescente per indice i molteplicità dei frame
+	TMath::Sort(npol,tmp_nfr,fr_sort);
+	//cout << "s1 " << tmp_nfr[fr_sort[0]] << " " << tmp_clfr[fr_sort[0]] << endl;
+	//cout << "s2 " << tmp_nfr[fr_sort[1]] << " " << tmp_clfr[fr_sort[1]] << endl;
+	//cout << "s3 " << tmp_nfr[fr_sort[2]] << " " << tmp_clfr[fr_sort[2]] << endl;
+	Int_t nbfc_same_fr = TMath::MaxElement(npol,tmp_nfr);   // Indice di massima molteplicità tra i frame
+	Int_t max_fr = tmp_clfr[fr_sort[0]];                 // cerca il frame associato all'indice di massima molteplicità
+
+	//cout << nbfc_same_fr << " " << max_fr << endl;
+
+	if((nCopy-nbfc_same_fr)/(nCopy/2.)<1 && nCopy>=5){  // start correction (algoritmo di correzione, solo per collezioni con almeno 5 elementi) 
+	  /// start cluster
+	  for(int jn=0; jn<cl_;jn++){	 
+	    if(cl_igr[jn]==gr_id[in]  && cl_flags[jn]==0){   // cerco tra i cluster associati al grano
+	      //cout <<in << " " << cl_ipol[jn] << " " <<  max_fr << " " << bfc_zfr[cl_ipol[jn]] << " " << fr_iz[cl_ifr[jn]] << endl;
+	      if(fr_iz[cl_ifr[jn]]==max_fr && bfc_zfr[cl_ipol[jn]]!=max_fr){ // se il bfclfr non coincide con quello di massima molteplicità
+		ipol_gr[in][cl_ipol[jn]]=cl_id[jn];                          // rimpiazza quest'ultimo al posto del precedente
+		bfc_gap[in]=1;                                               // segnalo che c'era un gap nei bfclfr
+		//cout << max_fr << " " << bfc_zfr[cl_ipol[jn]] << " " << fr_iz[cl_ifr[jn]] << endl;
+	      }
+	    }	  
+	    //////////////////////// end if clust-grain 
+	  } // end cluster
+      
+	} ///// end correction
+	if((nCopy-nbfc_same_fr)==0 && nCopy!=0)bfc_gap[in]=0;           // gap zero se la molteplicità massima è uguale al numero di copie
+	//cout << "gfsdff "<< bfc_gap[in] << endl;
+	////////////////////////////////////////////////////////////////   end correction bfcfr
+
+
+	///// GAP Z (CROSS-CHECK BFC_GAP2) ---> controllo se la correzione ha avuto un effetto desiderato 
+	Double_t zbfcl2[nCopy]={};      
+	iCopy=0;
+	for(int jn=0;jn<npol;jn++){
+	  if(ipol_gr[in][jn]!=-1){
+	    zbfcl2[iCopy]=fr_z[cl_ifr[ipol_gr[in][jn]]];
+	    //cout << in << " " << " " << iCopy << " " << ipol_gr[in][jn] << " " << fr_z[cl_ifr[ipol_gr[in][jn]]] <<  " " << zbfcl2[iCopy] << endl;
+	    iCopy++;
+	  }
+	}
+	gr_gap_z2[in] = TMath::MaxElement(nCopy,zbfcl2) - TMath::MinElement(nCopy,zbfcl2);
+	//cout <<"gap rec "<< gr_gap_z2[in] << endl;
+	////////////////////////////////////////////////////////////////
+      
+
+	/// FRAME OF THE BEST FOCUS CLUSTER FOR EACH POLARIZATION  (PIU PRECISO SE NEL FR DEL BFC CI SONO PIU CLUSTER)
+	for(int jn=0;jn<cl_;jn++){
+	  if(cl_igr[jn]==gr_id[in]  && cl_flags[jn]==0 && cl_ifr[jn]==cl_ifr[ipol_gr[in][cl_ipol[jn]]] && ipol_gr[in][cl_ipol[jn]]!=-1){
+	    xb_frbf[in][cl_ipol[jn]]+=cl_x2[jn];//*cl_vol[jn]/cl_npx[jn];
+	    yb_frbf[in][cl_ipol[jn]]+=cl_y2[jn];//*cl_vol[jn]/cl_npx[jn];
+	    vol_frbf[in][cl_ipol[jn]]+=cl_vol[jn];
+	    npx_frbf[in][cl_ipol[jn]]+=cl_npx[jn];
+	    frbf_ent[in][cl_ipol[jn]]++;
+	    //cout << in << " " << cl_ipol[jn] << " " <<  xb_frbf[in][cl_ipol[jn]] << " " << yb_frbf[in][cl_ipol[jn]] << " " << cl_vol[jn] << " " << cl_npx[jn] << endl;
+	  }
+	  ////////////////////////////////////////
+		
+	  ////// start frame //////////////// (MOLTEPLICITA' BEST FOCUS CLUSTER FRAME - SAME_FRAME==2)
+	  if(cl_igr[jn]==gr_id[in]  && cl_flags[jn]==0){
+	    if(cl_ifr[jn]==bfc_ifr[cl_ipol[jn]] && jn!=ipol_gr[in][cl_ipol[jn]])same_frame[in][cl_ipol[jn]]=2;
+	    //cout << in << " " << jn << " " << ipol_gr[in][cl_ipol[jn]] << " " <<  cl_ipol[jn]  << " " << bfc_ifr[cl_ipol[jn]] << " " << cl_ifr[jn] << " " << tmp_same_frame[cl_ipol[jn]] << " " << same_frame[in][cl_ipol[jn]] << endl;	  
+	  }
+	  //////////// end frame
+	}
+	/////////////////  end
+           
+	//////////// BARYCENTER BEST FOCUS CLUSTER FRAME  (BARICENTRO CALCOLATO NEL FRAME DEL BFC, PIU PRECISO DEL BAR DEL SOLO BFC)  
+	for(int jn=0;jn<npol;jn++){
+	  //cout << "2 "<< jn << " " << ipol_gr[in][jn] << " " << fr_iz[cl_ifr[ipol_gr[in][jn]]] << endl;
+	  if(ipol_gr[in][jn]!=-1){
+	    xb_frbf[in][jn]=xb_frbf[in][jn]/frbf_ent[in][jn];//]vol_frbf[in][jn]/npx_frbf[in][jn];
+	    yb_frbf[in][jn]=yb_frbf[in][jn]/frbf_ent[in][jn];//]vol_frbf[in][jn]/npx_frbf[in][jn];
+	    //cout << in << " " << jn << " " << ipol_gr[in][jn] << " " << xb_frbf[in][jn] <<  " " << vol_frbf[in][jn] << endl;
+	  }   
+	}
+	/////////////////// end     
+      }
+      /////////////////// END 1
+
+
+      /////////////////// PARTE 2: CARATTERIZZAZIONE DELLE MICROTRACCE  ////////////////////////////////////////////////////////////////////
+    
+      ///// DIFFERENZA IN VOLUME MAX E MIN TRA I GRANI DI UNA MICROTRACCIA E CALCOLO DI PHI
+      for(int kn=0;kn<nmt;kn++){
+	int imt=0;
+	int tmp_mt_id=-1;
+	Double_t *vol_mt = new Double_t[mt_ngr[kn]];
+	Double_t *x_mt = new Double_t[mt_ngr[kn]];
+	Double_t *y_mt = new Double_t[mt_ngr[kn]];
+	for(int in=0;in<gr_;in++){
+	  if(gr_imt[in]==kn){
+	    vol_mt[imt]=gr_vol[in];
+	    x_mt[imt]=gr_x[in];
+	    y_mt[imt]=gr_y[in];
+	    if(imt==0)tmp_mt_id=in;
+	    //cout << jentry << " " << kn << " " << in << " " << vol_mt[imt] << " " << tmp_mt_id <<  " " << x_mt[imt] << " " << y_mt[imt] << endl;
+	    imt++;
+	  }
+	}
+	if(mt_ngr[kn]==2){   // coefficiente angolare se il numero di grani è 2
+	  phi_mt[tmp_mt_id]=TMath::ATan((y_mt[1]-y_mt[0])/(x_mt[1]-x_mt[0]));
+	  //cout << phi_mt[tmp_mt_id] << endl;
+	}
+	if(mt_ngr[kn]>2){   /// fit lineare se il numero di grani è maggiore di 2
+	  TGraph *grmt = new TGraph(mt_ngr[kn],x_mt,y_mt);
+	  grmt->Fit("pol1","Q");
+	  TF1 *pol1 = grmt->GetFunction("pol1");
+	  phi_mt[tmp_mt_id] = TMath::ATan(pol1->GetParameter(1));
+	  pol1->ReleaseParameter(1);
+	  //cout << phi_mt[tmp_mt_id] << endl;
+	}
+	mt_dif_vol[tmp_mt_id]=TMath::MaxElement(imt,vol_mt) - TMath::MinElement(imt,vol_mt); // differenza tra volume massimo e minimo dei grani in una microtraccia
+	//cout << tmp_mt_id << " " << mt_dif_vol[tmp_mt_id] << endl;
+	delete [] vol_mt;
+	delete [] x_mt;
+	delete [] y_mt;
+	//delete grmt;
+	//delete pol1;
+      }
+      //////////////////////// END 2
+    
+
+      /////////////////// PARTE 3: COLLEZIONI DI GRANI  ////////////////////////////////////////////////////////////////////////////////////////////////
+
+      for(int in = 0;in<gr_; in++){
+
+	mybfcl  << "Id candidate: "<< gr_id[in] << endl;
+	if(gr_imt[in]!=-1)mybfcl << "It's a microtrack " << endl;
+
+	///////////////// ELEMENTI IN UNA COLLEZIONE
+	gr_copy[in]=npol;     
+	for(int jpol=0;jpol<npol;jpol++){
+	  if(ipol_gr[in][jpol]==-1)gr_copy[in]--;
+	}
+	///////////////////////////////////////////
+
+	//////////////// INIZIALIZATIONS
+	index_pol=0;
+	match=0;
+	Double_t *gr_phi_pol = new Double_t[gr_copy[in]];
+	Int_t ndelta= (gr_copy[in]*(gr_copy[in]-1))/2;
+	Int_t idelta=0;
+	Double_t *delta_phi_pol = new Double_t[ndelta];
+	Double_t *gr_x_pol = new Double_t[gr_copy[in]];
+	Double_t *gr_y_pol = new Double_t[gr_copy[in]];
+	Double_t *gr_x_pol_bar = new Double_t[gr_copy[in]];
+	Double_t *gr_y_pol_bar = new Double_t[gr_copy[in]];
+	Double_t *gr_npx_pol_bar = new Double_t[gr_copy[in]];
+	Double_t *gr_vol_pol_bar = new Double_t[gr_copy[in]];
+	Double_t *gr_bright_pol_bar = new Double_t[gr_copy[in]];
+	Double_t *gr_z_pol = new Double_t[gr_copy[in]];
+	Double_t *gr_angpol = new Double_t[gr_copy[in]];
+	Double_t *gr_npx_pol = new Double_t[gr_copy[in]];
+	Double_t *gr_pol_id = new Double_t[gr_copy[in]];
+	Double_t *gr_step = new Double_t[npol];
+
+	q_line[in]=0;
+	m_line[in]=0;
+	gr_max_amp[in]=0;
+	gr_max_dist_bar[in]=0;
+	gr_max_dist[in]=0;
+	gr_path[in]=0;
+	gr_fr[in]=0;
+	gr_isolated[in]=-1;
+      
+	Double_t sort_gr[npol]={-1,-1,-1,-1,-1,-1,-1,-1};
+
+	////////////////////////////////////////////////////
+
+	/////////// CARATTERIZZAZIONE ELEMENTI DI UNA COLLEZIONE
+	for(int jpol=0;jpol<npol;jpol++){
+	  if(ipol_gr[in][jpol]!=-1){
+	    gr_phi_pol[index_pol]=cl_phi[ipol_gr[in][jpol]];
+	    gr_x_pol_bar[index_pol]=xb_frbf[in][jpol];
+	    gr_y_pol_bar[index_pol]=yb_frbf[in][jpol];
+	    gr_npx_pol_bar[index_pol]=npx_frbf[in][jpol];
+	    gr_vol_pol_bar[index_pol]=vol_frbf[in][jpol];
+	    gr_bright_pol_bar[index_pol]=vol_frbf[in][jpol]/npx_frbf[in][jpol];
+	    gr_x_pol[index_pol]=cl_x2[ipol_gr[in][jpol]];
+	    gr_y_pol[index_pol]=cl_y2[ipol_gr[in][jpol]];
+	    gr_z_pol[index_pol]=cl_z[ipol_gr[in][jpol]];
+	    gr_npx_pol[index_pol]=cl_npx[ipol_gr[in][jpol]];
+	    gr_pol_id[index_pol]=cl_ipol[ipol_gr[in][jpol]];
+	    gr_angpol[index_pol]=cl_pol[ipol_gr[in][jpol]];
+	    if(cl_ipol[ipol_gr[in][jpol]]==0)gr_vol_ref[in]=vol_frbf[in][jpol];	  
+	    if(same_frame[in][jpol]==2)gr_isolated[in]=2;
+	    set_fr[in]=cl_ifr[gr_ibfc[in]];
+	    gr_npx_sum[in] += npx_frbf[in][jpol];
+	    gr_vol_sum[in] += vol_frbf[in][jpol];
+	    tmp_ifr=fr_iz[cl_ifr[gr_ibfc[in]]];
+	    //cout << index_pol << " " <<  xb_frbf[in][jpol] << " " << yb_frbf[in][jpol] << endl;
+	    //if(gr_isolated[in]==-1)cout << index_pol << " " << gr_x_pol[index_pol] << " " << gr_y_pol[index_pol] << " " << gr_x_pol_bar[index_pol] << " " << gr_y_pol_bar[index_pol] <<  endl;
+	    //if(gr_isolated[in]==2)cout << in << " " << index_pol << " " << ipol_gr[in][jpol] << " " << gr_x_pol_bar[index_pol] << " " << gr_y_pol_bar[index_pol] << " " << gr_x_pol[index_pol] << " " << gr_y_pol[index_pol] << endl;
+
+	    mybfcl  << "Bfc candidates: "<< ipol_gr[in][jpol] << " " << gr_pol_id[index_pol] << " " << gr_x_pol[index_pol] << " " << gr_y_pol[index_pol] << " " <<  gr_z_pol[index_pol] << endl;
+	    sort_gr[cl_ipol[ipol_gr[in][jpol]]]=ipol_gr[in][jpol];
+	  
+	    index_pol++;
+	  }
+	}
+	////////////////////////////////////////////////////////////////
+
+      
+	///// SET STATISTICS INFO /////////////////////
+	if(index_pol>1){
+	  gr_phi_rms[in] = TMath::RMS(index_pol,gr_phi_pol,gr_bright_pol_bar);
+	  gr_x_rms[in] = TMath::RMS(index_pol,gr_x_pol,gr_bright_pol_bar);
+	  gr_y_rms[in] = TMath::RMS(index_pol,gr_y_pol,gr_bright_pol_bar);
+	  gr_z_rms[in] = TMath::RMS(index_pol,gr_z_pol,gr_bright_pol_bar);
+	  gr_npx_rms_bar[in] = TMath::RMS(index_pol,gr_npx_pol_bar);
+	  gr_vol_rms_bar[in] = TMath::RMS(index_pol,gr_vol_pol_bar);
+	  gr_vol_mean_bar[in] = TMath::Mean(index_pol,gr_bright_pol_bar);       
+	  gr_phi_mean[in] = TMath::Mean(index_pol,gr_phi_pol,gr_bright_pol_bar);
+	  gr_x_mean[in] = TMath::Mean(index_pol,gr_x_pol,gr_bright_pol_bar);
+	  gr_y_mean[in] = TMath::Mean(index_pol,gr_y_pol,gr_bright_pol_bar);
+	  //cout << gr_phi_rms[in] << endl;
+	}
+      
+	///////// MAX DISTANCE E PHI PER BFCL E BARYCENTER IN BFCLFR
+	for(int iset = 0;iset<index_pol;iset++){
+	  cl_x_pos[in][iset]=gr_x_pol[iset];
+	  cl_y_pos[in][iset]=gr_y_pol[iset];
+	  cl_z_pos[in][iset]=gr_z_pol[iset];
+	  for(int jset = 0;jset<index_pol;jset++){
+	    if(TMath::Sqrt(TMath::Power(gr_x_pol[iset]-gr_x_pol[jset],2)+TMath::Power(gr_y_pol[iset]-gr_y_pol[jset],2))>gr_max_dist[in]){  // test
+	      gr_max_dist[in]=TMath::Sqrt(TMath::Power(gr_x_pol[iset]-gr_x_pol[jset],2)+TMath::Power(gr_y_pol[iset]-gr_y_pol[jset],2));
+	      phi_set[in] = TMath::ATan((gr_y_pol[iset]-gr_y_pol[jset])/(gr_x_pol[iset]-gr_x_pol[jset]));
+	      gr_x_maxbar[in]=gr_x_pol[iset];
+	      gr_y_maxbar[in]=gr_y_pol[iset];
+	      gr_x_minbar[in]=gr_x_pol[jset];
+	      gr_y_minbar[in]=gr_y_pol[jset];
+	      gr_maxpol1[in]=gr_angpol[iset];
+	      gr_maxpol2[in]=gr_angpol[jset];
+	    }
+	    if(TMath::Sqrt(TMath::Power(gr_x_pol_bar[iset]-gr_x_pol_bar[jset],2)+TMath::Power(gr_y_pol_bar[iset]-gr_y_pol_bar[jset],2))>gr_max_dist_bar[in]){
+	      gr_max_dist_bar[in]=TMath::Sqrt(TMath::Power(gr_x_pol_bar[iset]-gr_x_pol_bar[jset],2)+TMath::Power(gr_y_pol_bar[iset]-gr_y_pol_bar[jset],2));
+	      phi_set_bar[in] = TMath::ATan((gr_y_pol_bar[iset]-gr_y_pol_bar[jset])/(gr_x_pol_bar[iset]-gr_x_pol_bar[jset]));
+	      the_set_bar[in] = TMath::ATan((TMath::Power((gr_y_pol_bar[iset]-gr_y_pol_bar[jset]),2)+TMath::Power((gr_x_pol_bar[iset]-gr_x_pol_bar[jset]),2))/(gr_z_pol[iset]-gr_z_pol[jset]));
+	      m_line[in] = TMath::Tan(phi_set_bar[in]);                             // servono per l'ampiezza  (coefficiente angolare della retta)
+	      q_line[in] = gr_y_pol_bar[jset] - m_line[in]*gr_x_pol_bar[jset];      // servono per l'ampiezza  (intercetta)
+	      //cout << in << " " << iset << " " << cl_x_pos[in][iset] << " " << cl_y_pos[in][iset] << " " << cl_z_pos[in][iset] <<  endl;
+	      //cout << in << " " << jset << " " << cl_x_pos[in][jset] << " " << cl_y_pos[in][jset] << " " << cl_z_pos[in][jset] <<  endl;
+	      //cout << the_set_bar[in] << " " << gr_z_pol[iset]-gr_z_pol[jset] << endl;
+	    }
+	  }
+	}
+	///////////////////////////////////////////////////////
+
+	////////////////////// MAX AMPLITUDE    (distanza massima di un bfcl dalla retta che collega i bfc che danno origine alla massima distanza)
+	for(int iset = 0;iset<index_pol;iset++){
+	  if(TMath::Abs((gr_y_pol_bar[iset]) - (m_line[in]*gr_x_pol_bar[iset] + q_line[in]))/(TMath::Sqrt(1+m_line[in]*m_line[in]))>gr_max_amp[in]) gr_max_amp[in]=TMath::Abs((gr_y_pol_bar[iset]) - (m_line[in]*gr_x_pol_bar[iset] + q_line[in]))/(TMath::Sqrt(1+m_line[in]*m_line[in]));
+	  //cout << in << " " << gr_maxpol1[in] << " " << gr_maxpol2[in] << " " << gr_pol_id[iset] << " " << q_line[in] << " " << m_line[in] << " " << gr_x_pol_bar[iset] << " " << gr_y_pol_bar[iset] << " " << gr_max_amp[in] << endl; 
+	}
+	///////////////////////////////
+      
+	///////// LUNGHEZZA DEL PERCORSO (LINEA CHIUSA) CALCOLATO A PARTIRE DA POL 0 (ha senso solo per numero di copie uguale a 8)
+	for(int pid = 0;pid<npol; pid++){
+	  gr_step[pid]=-1;
+	  for(int iset = 0;iset<index_pol;iset++){
+	    if(gr_pol_id[iset]==pid && match==0){   // solo per match=0 (ovvero il punto di origine che può essere anche diverso da pol=0°)
+	      pre_step_x=gr_x_pol_bar[iset];
+	      pre_step_y=gr_y_pol_bar[iset];
+	      //cout << pid << " " << gr_pol_id[iset] << " " << gr_path[in] << endl;
+	      first_step_x=gr_x_pol_bar[iset];
+	      first_step_y=gr_y_pol_bar[iset];
+	      match++;
+	    }
+	    if(gr_pol_id[iset]==pid && match>0 && pid>0){ /// punti successivi
+	      gr_path[in] += TMath::Sqrt(TMath::Power(gr_x_pol_bar[iset]-pre_step_x,2)+TMath::Power(gr_y_pol_bar[iset]-pre_step_y,2));
+	      if(gr_copy[in]==npol)gr_step[pid] = TMath::Sqrt(TMath::Power(gr_x_pol_bar[iset]-pre_step_x,2)+TMath::Power(gr_y_pol_bar[iset]-pre_step_y,2));
+	      pre_step_x=gr_x_pol_bar[iset];
+	      pre_step_y=gr_y_pol_bar[iset];
+	      //cout << pid << " " << gr_pol_id[iset] << " " << gr_path[in] << " " << match <<  endl;
+	      match++;
+	    }
+	  }
+	  //cout << pid <<  " " << gr_path[in] << " " << match <<  endl;
+	  if(match==npol){
+	    gr_path[in]+=TMath::Sqrt(TMath::Power(first_step_x-pre_step_x,2)+TMath::Power(first_step_y-pre_step_y,2));  // chiudo la linea
+	    if(gr_copy[in]==npol)gr_step[0] = TMath::Sqrt(TMath::Power(first_step_x-pre_step_x,2)+TMath::Power(first_step_y-pre_step_y,2));
+	    //cout << pid <<  " " << gr_path[in] << " " << match <<  " " << gr_step[0] << endl;
+	  }
+	  //cout << pid <<  " " << gr_path[in] << " " << match <<  " " << gr_step[pid] << endl;
+	}
+	//////////////////////////////////////////// end 
+
+	gr_mean_path[in] = TMath::Mean(npol,gr_step);
+	gr_rms_path[in] = TMath::RMS(npol,gr_step);
+	gr_max_path[in] = TMath::MaxElement(npol,gr_step);
+      
+	delete [] gr_step;
+	delete [] delta_phi_pol;
+	delete [] gr_phi_pol;
+	delete [] gr_x_pol;
+	delete [] gr_y_pol;
+	delete [] gr_z_pol;
+	delete [] gr_npx_pol;
+	delete [] gr_x_pol_bar;
+	delete [] gr_y_pol_bar;
+	delete [] gr_npx_pol_bar;
+	delete [] gr_vol_pol_bar;
+	delete [] gr_bright_pol_bar;
+	delete [] gr_angpol;
+	delete [] gr_pol_id;
+
+
+	/////// OUTPUT ////////////////
+	mybfcl << "View: "<< viewID << " - Grain ID: " << in << " - # Elements: " << index_pol << endl;
+	mybfcl << "bfcl("<<viewID << "," << in << ",20,";
+	if(gr_copy[in]==npol)bfcl8 << "bfcl("<<viewID << "," << in << ",20,";
+	for(int k=0;k<npol;k++){
+	  if(k<7){
+	    mybfcl <<sort_gr[k] << ",";
+	    if(gr_copy[in]==npol)bfcl8 <<sort_gr[k] << ",";
+	  }
+	  if(k==7){
+	    mybfcl <<sort_gr[k] << ")";
+	    if(gr_copy[in]==npol)bfcl8 <<sort_gr[k] << ")";
+	  }
+	}
+	mybfcl << endl;
+	if(gr_copy[in]==npol)bfcl8 << endl;
+	///////////////////////////////////
+      }
+      ////////////////// END 3
+
+      /////////////////// PARTE 4: CARATTERIZZAZIONE DEI SINGOLI GRANI RICOSTRUITI ////////////////////////////////////////////////////////////////////
+      for(int in=0;in<gr_;in++){
+
+	//// INIZIALIZATIONS
+	tmp_gr_dist=0;
+	tmp_rdist=100;
+	tmp_rdist2=100;
+	tmp_rdist_ldust=100;
+	////////////////////////
+      
+	if(grain[in] && gr_lx[in]!=gr_ly[in] && gr_ncl[in]<=30 && gr_ly[in]>=0.100  && gr_isolated[in]==-1){ // SOLO GRANI ISOLATI CHE PASSANO I CUT
+	  /// MINIMA DISTANZA 
+	  for(int kn=0;kn<gr_;kn++){
+	    if(grain[kn] && gr_lx[kn]!=gr_ly[kn] && gr_ncl[kn]<=30 && gr_ly[kn]>=0.100 &&  gr_isolated[kn]==-1 && kn!=in){ // SOLO GRANI ISOLATI CHE PASSANO I CUT
+	      bfcl_rdist=TMath::Sqrt(TMath::Power(gr_x[kn]-gr_x[in],2)+TMath::Power(gr_y[kn]-gr_y[in],2)+TMath::Power(gr_z[kn]-gr_z[in],2));
+	      if(bfcl_rdist<tmp_rdist){
+		tmp_rdist=bfcl_rdist;
+	      }	    
+	    }
+	  }
+	  hrdist->Fill(tmp_rdist);
+	}
+	//////////////////////end
+
+	if(grain[in] && gr_lx[in]!=gr_ly[in]  && gr_isolated[in]==2 && gr_ncl[in]<=30 && gr_ly[in]>=0.100 && gr_imt[in]==-1){ // GRANI CON DUE PICCHI (MTRK) CHE SUPERANO I CUT
+	  /// DISTANZA TRA I DUE PICCHI
+	  for(int jn=0;jn<cl_;jn++){
+	    if(cl_igr[jn]==gr_id[in] &&  cl_ifr[jn]==cl_ifr[ipol_gr[in][cl_ipol[jn]]] && cl_flags[jn]==0 && jn!=ipol_gr[in][cl_ipol[jn]]){ // GRANI CON DUE PICCHI (MTRK) CHE SUPERANO I CUT 
+	      bfcl_rdist2=TMath::Sqrt(TMath::Power(cl_x2[ipol_gr[in][cl_ipol[jn]]]-cl_x2[jn],2)+TMath::Power(cl_y2[ipol_gr[in][cl_ipol[jn]]]-cl_y2[jn],2));
+	      if(bfcl_rdist2<tmp_rdist2){
+		tmp_rdist2=bfcl_rdist2;
+		phiang2 = TMath::ATan((cl_y2[ipol_gr[in][cl_ipol[jn]]]-cl_y2[jn])/(cl_x2[ipol_gr[in][cl_ipol[jn]]]-cl_x2[jn]));
+		npeak_vol_dif = (cl_vol[ipol_gr[in][cl_ipol[jn]]] - cl_vol[jn]);   // differenza volume tra i due picchi
+		npeak_npx_dif = (cl_npx[ipol_gr[in][cl_ipol[jn]]] - cl_npx[jn]);   // differenza area tra i due picchi
+		npeak_bri_dif = (cl_vol[ipol_gr[in][cl_ipol[jn]]]/cl_npx[ipol_gr[in][cl_ipol[jn]]] - cl_vol[jn]/cl_npx[jn]);  // differenza luminosità tra i due picchi
+		
+		//cout << phiang2 << endl;
+	      }
+	    }
+	  }
+	  hrdist2->Fill(bfcl_rdist2);
+	  twopeak_dist[in]=bfcl_rdist2;
+	  twopeak_phi[in]=phiang2;
+	  twopeak_dvol[in]=TMath::Abs(npeak_vol_dif);
+	  twopeak_dnpx[in]=TMath::Abs(npeak_npx_dif);
+	  twopeak_dbri[in]=TMath::Abs(npeak_bri_dif);
+	  //cout << in << " "  << twopeak_dist[in] << endl;
+	}
+	////////////////// end
+	
+	//////  MIN DIST BETWEEN LARGE DUST AND NEARBY LARGE DUST
+	if(ldust[in] && gr_lx[in]!=gr_ly[in]){  /// prendo solo i large dust
+	  ///  DISTANZA DAL LARGE DUST  (espressa in unità di raggio medio del grano)
+	  for(int jn=0;jn<gr_;jn++){
+	    if(!ldust[jn] &&  gr_lx[jn]!=gr_ly[jn]) { ///// tutti i grani tranne i large dust
+	      bfcl_rdist_ldust=(TMath::Sqrt(TMath::Power(gr_x[jn]-grain_Ox[in],2)+TMath::Power(gr_y[jn]-grain_Oy[in],2)))/(TMath::Sqrt(grain_area[in]/TMath::Pi()));//*((x_pix_size-y_pix_size)/2.));
+	      //bfcl_rdist_ldust=(TMath::Sqrt(TMath::Power(gr_x[jn]-grain_Ox[in],2)+TMath::Power(gr_y[jn]-grain_Oy[in],2)))/(TMath::Sqrt((gr_npx[in]/gr_ncl[in])/(TMath::Pi()))*((x_pix_size-y_pix_size)/2.));
+	      //cout << (TMath::Sqrt(TMath::Power(gr_x[jn]-grain_Ox[in],2)+TMath::Power(gr_y[jn]-grain_Oy[in],2))) << " " << (TMath::Sqrt((gr_npx[in]/gr_ncl[in])/(TMath::Pi()))*((x_pix_size-y_pix_size)/2.)) << endl;
+	      hrdist_ldust->Fill(bfcl_rdist_ldust);
+	      // cout << jentry << " " << ent << endl;
+	    }
+	  }
+	}
+	//////////////////// end
+	//cout << in << " "  << twopeak_dist[in] << " " << twopeak_phi[in] << endl;
+      } /// relative distance
+
+      ///////////////////////////// END 4
+
+      /////////////////// PARTE 5: DATASET (costruzione del Tree)  ////////////////////////////////////////////////////////////////////////////////////////////////
+    
+      for(int in = 0;in<gr_; in++){   /// indice sui grani
+	int clset[npol]={};
+	for(int jn=0; jn<npol;jn++){     /// indice sulle polarizzazioni
+	  eViewID=viewID;
+	  eGrainID=in;
+	  eNgr=ngr;
+	  ePolID=jn;
+	  ePuls=gr_ncl[in];
+	  eBfcPolID=ipol_gr[in][jn];
+	  eBfcID=gr_ibfc[in];
+	  eBfcGap=bfc_gap[in];
+	  eNcl=ncl;
+	  eNclFr=fr_ncl[cl_ifr[gr_ibfc[in]]];
+	  eGrainx=gr_x[in];
+	  eGrainy=gr_y[in];
+	  eGrainz=gr_z[in];
+	  eClustx=cl_x_pos[in][jn];
+	  eClusty=cl_y_pos[in][jn];
+	  eClustz=cl_z_pos[in][jn];
+	  eGrainMin=gr_ly[in];
+	  eGrainMaj=gr_lx[in];
+	  eGrainEll=gr_lx[in]/gr_ly[in];
+	  if(gr_phi[in]<=(TMath::Pi()/2.))eGrainPhi=gr_phi[in];
+	  if(gr_phi[in]>(TMath::Pi()/2.) && gr_phi[in]<=(3*TMath::Pi()/2.))eGrainPhi=gr_phi[in] - TMath::Pi();
+	  if(gr_phi[in]>(3*TMath::Pi()/2.) && gr_phi[in]<=(2*TMath::Pi()))eGrainPhi=gr_phi[in] - 2*TMath::Pi();
+	  eGrainTheta=gr_theta[in];
+	  eVolume=gr_vol[in];
+	  eBfcVolume=cl_vol[gr_ibfc[in]];
+	  eFrBfVolume=vol_frbf[in][jn];
+	  eArea=gr_npx[in];
+	  eBfcArea=cl_npx[gr_ibfc[in]];
+	  eFrBfArea=npx_frbf[in][jn];
+	  eGrainArea=grain_area[in];
+	  eXView=x;
+	  eYView=y;
+	  eZ=(zmin+zmax)*0.5;
+	  eZlen=gr_lz[in];
+	  eIsolated=gr_isolated[in];
+	  eNFrame=gr_frLast[in]-gr_frFirst[in]+1;
+	  eSetFrame=cl_ifr[gr_ibfc[in]];
+	  eSetNCopy=gr_copy[in];
+	  eSetGapZ=gr_gap_z[in];
+	  eSetGapZ2=gr_gap_z2[in];
+	  eSetGap=TMath::Sqrt(TMath::Power(cl_y2[gr_180[in]] - cl_y2[ipol_gr[in][jn]],2) + TMath::Power(cl_x2[gr_180[in]] - cl_x2[ipol_gr[in][jn]],2));
+	  //cout << cl_y[gr_180[in]] << " " <<  cl_y[ipol_gr[in][jn]] << " " << cl_x[gr_180[in]] << " " <<  cl_x[ipol_gr[in][jn]] << endl;
+	  eSetPath=gr_path[in];
+	  eSetMeanPath=gr_mean_path[in];
+	  eSetRmsPath=gr_rms_path[in];
+	  eSetMaxPath=gr_max_path[in];
+	  eSetMaxDist=gr_max_dist[in];
+	  eSetTwoPeakDist=twopeak_dist[in];
+	  eSetTwoPeakPhi=twopeak_phi[in];
+	  eSetTwoPeakDVol=twopeak_dvol[in];
+	  eSetTwoPeakDNpx=twopeak_dnpx[in];
+	  eSetTwoPeakDBri=twopeak_dbri[in];
+	  eSetMaxPol1=gr_maxpol1[in];
+	  eSetMaxPol2=gr_maxpol2[in];
+	  eSetMaxBar=gr_max_dist_bar[in];
+	  eSetMaxAmp=gr_max_amp[in];
+	  eSetXRms=gr_x_rms[in];
+	  eSetYRms=gr_y_rms[in];
+	  eSetXBar=gr_x_mean[in];
+	  eSetYBar=gr_y_mean[in];
+	  eSetXMaxBar=gr_x_maxbar[in];
+	  eSetYMaxBar=gr_y_maxbar[in];
+	  eSetXMinBar=gr_x_minbar[in];
+	  eSetYMinBar=gr_y_minbar[in];
+	  eSetPhiRms=gr_phi_rms[in];
+	  eSetPhiMean=gr_phi_mean[in];
+	  eSetPhi=phi_set[in];
+	  eSetPhiBar=phi_set_bar[in];
+	  eSetTheBar=the_set_bar[in];
+	  eSetMeanBright=gr_vol_mean_bar[in];
+	  eSetNpxRms=gr_npx_rms_bar[in];
+	  eSetVolRms=gr_vol_rms_bar[in];
+	  if(gr_vol_ref[in]!=0)eSetVolRatio=vol_frbf[in][jn]/gr_vol_ref[in];
+
+	  for(int kn=0;kn<gr_;kn++){
+	    if(grain[in] && grain[kn] && kn!=in){
+	      rdist=TMath::Sqrt(TMath::Power(gr_x[in]-gr_x[kn],2)+TMath::Power(gr_y[in]-gr_y[kn],2)+TMath::Power(gr_z[in]-gr_z[kn],2));
+	      xydist=TMath::Sqrt(TMath::Power(gr_x[in]-gr_x[kn],2)+TMath::Power(gr_y[in]-gr_y[kn],2));
+	      hdist=TMath::Abs(gr_z[in]-gr_z[kn]);
+	      //hrdist->Fill(rdist);
+	      if(rdist<2){                // user setting
+		ctd[in]=true;
+		ctd[kn]=true;
+	      }
+	    }
+	  } 
+	  eLargeDust=ldust[in];
+	  eGoodZone=grain[in];
+	  eShadow=shadow[in];
+	  eClustTypeDust=ctd[in];
+      
+
+	  //////// MICROTRACK //////////////////////
+	  eMTrk=-1;
+	  eMTGr=-1;
+	  eMTNfr=-1;
+	  eMTPhi=phi_mt[in];
+	  eMTThe=0;
+	  eMTLen=-1;
+	  eMTChi2=-1;
+	  eMTVolDif=mt_dif_vol[in];
+      
+	  if(gr_imt[in]!=-1){
+	    if(!mtrk[gr_imt[in]]){
+	      eMTrk=1;
+	      eMTGr=mt_ngr[gr_imt[in]];
+	      eMTNfr=mt_frLast[gr_imt[in]];	  	  
+	      //if(mt_phi[gr_imt[in]]<=TMath::Pi())eMTPhi=mt_phi[gr_imt[in]];
+	      //else eMTPhi=mt_phi[gr_imt[in]]-2*TMath::Pi();
+	      eMTThe=mt_theta[gr_imt[in]];
+	      eMTLen=mt_len[gr_imt[in]];
+	      eMTChi2=mt_chi2[gr_imt[in]];
+	      mtrk[gr_imt[in]]=true;	  
+	    }
+	    else eMTrk=11;
+	  }
+
+	  if(ipol_gr[in][jn]!=-1 && gr_copy[in]==npol && eGoodZone){
+	    //scaling(aRun,viewID,ipol_gr[in][jn],jn,scale_result);
+	    eBfcMeanBkg = scale_result[0];
+	    eBfcSigPeak = scale_result[1];
+	    eSclMeanBkg = scale_result[2];
+	    eSclSigPeak = scale_result[3];	
+	    if(jn==0){
+	      scale_ref = eBfcSigPeak/eBfcMeanBkg;
+	    }
+	    eBfcWeigth = eBfcSigPeak/eBfcMeanBkg/scale_ref;
+	    //cout << scale_result[0] << " " << scale_result[1] << endl;
+	  }
+	  else {
+	    eBfcMeanBkg=-1;
+	    eBfcSigPeak=-1;
+	    eSclMeanBkg=-1;
+	    eSclSigPeak=-1;
+	    eBfcWeigth=-1;
+
+	  }
+      
+	  if(jn==0 && eGoodZone && gr_copy[in]==npol){
+	    TH2F* h_sum = new TH2F(Form("hSum_%d_%d",viewID,in),"hSum",100,0,50,100,0,50);
+	    h_sum->Reset(0);
+	    for(int kn=0;kn<npol;kn++){
+	      clset[kn]=ipol_gr[in][kn];
+	    }
+	    //h_sum = merged_histo(aRun,view,viewID,in,clset);
+	    //gr_spectrum(h_sum,gr_scale_result);
+	    eGrMeanBkg = gr_scale_result[0];
+	    eGrSigPeak = gr_scale_result[1];
+	    delete h_sum;
+	  }
+	  Tree_out->Fill();      
+	}
+      }
+      ////////////////// END 5
+
+    
+    } //end crash
+  } // end su tutte le View
+  
+  grNcl->Write();
+  hrdist->Write();
+  hrdist2->Write();
+  hrdist_ldust->Write();
+  Tree_out->Write();
+  mybfcl.close();
+  bfcl8.close();
+  f_out->Close();
+  
+} // end Loop
+
+
+
+int myrun(){
+  vv.Loop();  
+}
+
+
+
+

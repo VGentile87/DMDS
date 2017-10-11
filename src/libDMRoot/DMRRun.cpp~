@@ -1,0 +1,620 @@
+//-- Authors :  VT   19/06/2016
+#include <TBranchClones.h>
+#include <TError.h>
+#include <TSystem.h>
+#include <TEventList.h>
+#include <TMath.h>
+
+#include "DMRRun.h"
+#include "DMRLog.h"
+#include "DMRRunHeader.h"
+#include "DMRTextFile.h"
+
+const Long64_t cstDefaultMaxTreeSize = 15000000000LL;
+
+ClassImp(DMRRun)
+using namespace TMath;
+//______________________________________________________________________________
+DMRRun::DMRRun()
+{
+  Init0();
+}
+
+//______________________________________________________________________________
+DMRRun::~DMRRun()
+{
+  if(eFile)   {delete eFile; eFile=0;};
+  if(eHeader) {delete eHeader; eHeader=0;};
+  //SafeDelete(ePredictions);
+  //SafeDelete(eMarks);
+}
+
+//______________________________________________________________________________
+DMRRun::DMRRun(const char *fname, const char *opt)
+{
+  Init0();
+  if(!opt) {
+    if( !gSystem->AccessPathName(fname, kFileExists) ) OpenExistingFile(fname,"READ");
+    else                                               OpenNewFile(fname);
+  }
+  else{
+    if     ( !strcmp(opt,"READ") )     OpenExistingFile(fname,"READ");
+    else if( !strcmp(opt,"UPDATE") )   OpenExistingFile(fname,"UPDATE");
+    else if( !strcmp(opt,"RECREATE") ) OpenNewFile(fname);
+  }
+}
+
+//______________________________________________________________________________
+void DMRRun::Init0()
+{
+  eView = new DMRView();
+  eTree=0;
+  eHeader = new DMRRunHeader();
+  eViewAlign   = 0;
+  eFrameAlign  = 0;
+  eVH1=new DMRViewHeader();
+  eVH2=new DMRViewHeader();
+  eFrames=0;
+  eFrameRaw = new DMRFrameRaw();
+  eFixEncoderFaults = false;
+}
+
+//______________________________________________________________________________
+void DMRRun::OpenExistingFile( const char *fname, const char *opt )
+{
+  eFile = new TFile( fname, opt );
+  if(!eFile)   Log(1,"DMRRun::OpenExisting","ERROR! can not open file %s", fname);
+  else         Log(2,"DMRRun::OpenExisting","Open an existing file %s", fname);
+
+  eViewAlign  = (TTree*)eFile->Get("ViewAlign");
+  eFrameAlign = (TTree*)eFile->Get("FrameAlign");
+  eTree       = (TTree*)eFile->Get("Vdmr");
+  if(!eTree) {
+    Log(1,"DMRRun::Open","ERROR: %s has no Vdmr tree",fname);
+    return;
+  }
+
+  SetView();
+
+  SafeDelete(eHeader);
+  eHeader = (DMRRunHeader*)eFile->Get("RunHeader");
+
+  //SafeDelete(ePredictions);
+  //ePredictions = (DMRPredictionsBox*)eFile->Get("Predictions");
+
+  //SafeDelete(eMarks);
+  //eMarks = (DMRMarksSet*)eFile->Get("Marks");
+
+  //if(gDMRDEBUGLEVEL>2) Print();
+}
+
+//______________________________________________________________________________
+void DMRRun::SetView( DMRView *view )
+{
+  if(!view) { Log(1,"DMRRun::SetView","ERROR: DMRRun::SetView: *view=0");    return; }
+
+  if(eView != view) {
+    if(eView) { eView->Clear(); delete eView; eView=0; }
+    eView = view;
+  }
+
+  SetView();
+}
+
+//______________________________________________________________________________
+void DMRRun::SetView()
+{
+  if(!eView) 
+  {
+    Log(2,"DMRRun::SetView","WARNING: *eView=0");
+    eView = new DMRView();
+  }
+
+  if(eView->HD) eTree->SetBranchAddress("hd", &(eView->HD) );
+  if(eView->CL) eTree->SetBranchAddress("cl", &(eView->CL) );
+  if(eView->GR) eTree->SetBranchAddress("gr", &(eView->GR) );
+  if(eView->MT) eTree->SetBranchAddress("mt", &(eView->MT) );
+  if(eView->IM) eTree->SetBranchAddress("im", &(eView->IM) );
+  if(eView->FR) eTree->SetBranchAddress("fr", &(eView->FR) );
+}
+
+//______________________________________________________________________________
+void DMRRun::OpenNewFile( const char *fname )
+{
+//  if(!ePredictions) ePredictions   = new EdbPredictionsBox();
+//  if(!eMarks)       eMarks         = new EdbMarksSet();
+
+  if( !gSystem->AccessPathName(fname, kFileExists) )
+    Log(1,"DMRRun::OpenNew","WARNING : file %s already exists!", fname);
+
+  Log(2,"DMRRun::OpenNew","Open new file %s", fname);
+  eFile = new TFile(fname,"RECREATE");
+  eFile->SetCompressionLevel(2);
+
+  eTree = new TTree("Vdmr","Scanning Viewes data in DMR format");
+  eTree->SetAutoSave(100000000);                     // autosave each 100Mb
+  eTree->SetMaxTreeSize(cstDefaultMaxTreeSize);              //set 15 Gb file size limit
+  Log(3,"DMRRun::Create","set maxtreesize as: %lld",eTree->GetMaxTreeSize());
+  if(eView->HD) eTree->Branch("hd","DMRViewHeader", &(eView->HD) );
+  if(eView->CL) eTree->Branch("cl", &(eView->CL) );
+  if(eView->GR) eTree->Branch("gr", &(eView->GR) );
+  if(eView->MT) eTree->Branch("mt", &(eView->MT) );
+  if(eView->IM) eTree->Branch("im", &(eView->IM) );
+  if(eView->FR) eTree->Branch("fr", &(eView->FR) );
+  SetView();
+}
+
+void DMRRun::SetMaxFileSize(Long64_t bytes_)
+{
+	if(eTree)
+	  eTree->SetMaxTreeSize(bytes_);
+	if(eFrames)
+	  eFrames->SetMaxTreeSize(bytes_);
+};
+
+//______________________________________________________________________________
+DMRView             *DMRRun::GetView()
+{
+	if(eView&&eView->HD&&eTree)
+	  eView->HD->id  = eTree->GetEntries();
+	return eView;
+}
+
+//______________________________________________________________________________
+void DMRRun::AddView( DMRView *view )
+{
+
+  if( view != eView ) {
+    Log(3," DMRRun::AddView","WARNING: view!=eView - inefficient cycle!");
+    SetView(view);
+  }
+  eView->HD->id  = eTree->GetEntries();
+  eView->HD->ncl = eView->CL->GetEntries();
+  eView->HD->ngr = eView->GR->GetEntries();
+  eView->HD->nmt = eView->MT->GetEntries();
+  eView->HD->nim = eView->IM->GetEntries();
+  eView->HD->nfr = eView->FR->GetEntries();
+
+  eTree->Fill();
+  eView->Clear();
+}
+
+//______________________________________________________________________________
+void DMRRun::Close()
+{
+  eFile = eTree->GetCurrentFile();
+  const char *status = eFile->GetOption();
+
+  GetFile()->cd();
+
+  if( strcmp(status,"READ") ) {             // file is in "write" mode
+    if( !strcmp(status,"CREATE") ) {        // save header in CREATE mode only
+      if(eHeader)        eHeader->Write("RunHeader");
+      //if(ePredictions)   ePredictions->Write("Predictions");
+      //if(eMarks)         eMarks->Write("Marks");
+    }
+    if(eTree)          eTree->Write();
+    if(eViewAlign)     eViewAlign->Write();
+    if(eFrameAlign)    eFrameAlign->Write();
+    if(eFrames)        eFrames->Write();
+  }
+  eFile->Purge();
+  eFile->Close();
+}
+
+//_________________________________________________________________________________
+DMRView *DMRRun::GetEntry( int entry, int ihd, int icl, int igr, int imt, int iim, int ifr )
+{
+  bool do_update=false;
+  if( !eView || (eView->HD->ID()!=entry) )                                          do_update=true;
+  if( (icl!=eView->redCL) || (igr!=eView->redGR) || (imt!=eView->redMT) || (iim!=eView->redIM) || (ifr!=eView->redFR) ) do_update=true;
+  if(do_update)
+  //if(1)
+  {
+    if(eView)     eView->Clear();
+    else          SetView();
+
+    if(ihd)
+    {
+      TBranch *hdb = eTree->GetBranch("hd");
+      if(hdb) 
+      {
+        hdb->ResetReadEntry();
+      //hdb->SetAddress(&(eView->HD));  //??
+        hdb->GetEntry(entry);
+        eView->redHD=true;
+      }
+    }
+
+    if(icl)
+    {
+      TBranchClones *clb = (TBranchClones*)eTree->GetBranch("cl");
+      if(clb) 
+      {
+        clb->ResetReadEntry();
+      //clb->SetAddress(&(eView->CL));  //??
+        clb->GetEntry(entry);
+        eView->redCL=true;
+      }
+    }
+
+    if(igr)
+    {
+      TBranchClones *grb = (TBranchClones*)eTree->GetBranch("gr");
+      if(grb) 
+      {
+        grb->ResetReadEntry();
+      //grb->SetAddress(&(eView->GR));  //??
+        grb->GetEntry(entry);
+        eView->redGR=true;
+      }
+    }
+
+    if(imt)
+    {
+      TBranchClones *mtb = (TBranchClones*)eTree->GetBranch("mt");
+      if(mtb) 
+      {
+        mtb->ResetReadEntry();
+      //mtb->SetAddress(&(eView->MT));  //??
+        mtb->GetEntry(entry);
+        eView->redMT=true;
+      }
+    }
+  
+    if(iim)
+    {
+      TBranchClones *imb = (TBranchClones*)eTree->GetBranch("im");
+      if(imb) 
+      {
+        imb->ResetReadEntry();
+      //imb->SetAddress(&(eView->IM));  //??
+        imb->GetEntry(entry);
+        eView->redIM=true;
+      }
+    }
+
+    if(ifr)
+    {
+      TBranchClones *frb = (TBranchClones*)eTree->GetBranch("fr");
+      if(frb) 
+      {
+        frb->ResetReadEntry();
+      //frb->SetAddress(&(eView->FR));  //??
+        frb->GetEntry(entry);
+        eView->redFR=true;
+      }
+    }
+    if(eFixEncoderFaults) eView->FixEncoderFaults();
+  }
+  return eView;
+}
+
+//_________________________________________________________________________________
+void DMRRun::AddTextFile( const char *file, const char *name )
+{
+  DMRTextFile tf;
+  tf.ReadFile(file);
+  tf.Write(name);
+}
+
+//______________________________________________________________________________
+void DMRRun::AddViewAlign( Int_t view1, Int_t view2, Int_t area1, Int_t area2, Int_t side1, Int_t side2,
+                           Float_t dx, Float_t dy, Float_t dz, 
+                           Int_t n1tot, Int_t n2tot, Int_t n1, Int_t n2, Int_t nsg, Int_t nbg, Int_t flag,
+                           DMRViewHeader &vh1, DMRViewHeader &vh2)
+{
+  if(!eViewAlign) {
+    eViewAlign = new TTree("ViewAlign","Alignment offsets");
+    eViewAlign->Branch("alpar",&eVA,"view1/I:view2/I:area1/I:area2/I:side1/I:side2/I:dx/F:dy/F:dz/F:n1tot/I:n2tot/I:n1/I:n2/I:nsg/I:nbg/I:flag/I");
+    eViewAlign->Branch("vh1","DMRViewHeader",&eVH1);
+    eViewAlign->Branch("vh2","DMRViewHeader",&eVH2);
+  }
+  if(eViewAlign) {
+    eVA.view1=view1; eVA.view2=view2;
+    eVA.area1=area1; eVA.area2=area2;
+    eVA.side1=side1; eVA.side2=side2;
+    eVA.dx=dx;   eVA.dy=dy; eVA.dz=dz;
+    eVA.n1tot=n1tot; eVA.n2tot=n2tot;
+    eVA.n1=n1; eVA.n2=n2;
+    eVA.nsg=nsg; eVA.nbg=nbg;
+    eVA.flag=flag;
+    *eVH1=vh1;
+    *eVH2=vh2;
+    eViewAlign->Fill();
+  }
+}
+
+//______________________________________________________________________________
+void DMRRun::AddFrameAlign( Int_t frame1, Int_t frame2, Int_t view, Int_t area, Int_t side,
+                            Float_t dxglobal, Float_t dyglobal, Float_t dx, Float_t dy, Float_t z1, Float_t z2, 
+                            Int_t n1tot, Int_t n2tot, Int_t n1, Int_t n2, Int_t nsg, Int_t nbg, Int_t flag)
+{
+  if(!eFrameAlign) {
+    eFrameAlign = new TTree("FrameAlign","Neighbour frames offsets");
+    eFrameAlign->Branch("frpar",&eFA,"frame1/I:frame2/I:view/I:area/I:side/I:dxglobal/F:dyglobal/F:dx/F:dy/F:z1/F:z2/F:n1tot/I:n2tot/I:n1/I:n2/I:nsg/I:nbg/I:flag/I");
+  }
+  if(eFrameAlign) {
+    eFA.frame1=frame1; eFA.frame2=frame2;
+    eFA.view=view;
+    eFA.area=area;
+    eFA.side=side;
+    eFA.dxglobal=dxglobal;
+    eFA.dyglobal=dyglobal;
+    eFA.dx=dx;   eFA.dy=dy; 
+    eFA.z1=z1;   eFA.z2=z2;
+    eFA.n1tot=n1tot; eFA.n2tot=n2tot;
+    eFA.n1=n1; eFA.n2=n2;
+    eFA.nsg=nsg; eFA.nbg=nbg;
+    eFA.flag=flag;
+    eFrameAlign->Fill();
+  }
+}
+
+//______________________________________________________________________________
+void DMRRun::AddFrameRaw()
+{
+  if(!eFrames) 
+  {
+    eFile->cd();
+    eFrames = new TTree("Frames","raw frames");
+    eFrames->Branch("fr","DMRFrameRaw", &eFrameRaw );
+    eFrames->SetAutoSave(100000000);                     // autosave each 100Mb
+		const Long64_t maxBytes = (eTree)? eTree->GetMaxTreeSize() : cstDefaultMaxTreeSize; //set 15 Gb file size limit
+    eFrames->SetMaxTreeSize(maxBytes);
+  }
+  if(eFrames) 
+  {
+    eFrames->Fill();
+  }
+}
+//______________________________________________________________________________
+bool DMRRun::SetFrames()
+{
+  if(!eFrames)
+	if(eFile)
+	{
+      eFrames = (TTree*)(eFile->Get("Frames"));
+      eFrames->SetBranchAddress("fr", &eFrameRaw );
+    }
+  if(eFrames)  return true;
+  else         return false;
+}
+//______________________________________________________________________________
+DMRFrameRaw *DMRRun::GetFrameRaw(int entr)
+{
+  if(SetFrames())
+  {
+	  eFrames->GetEntry(entr);
+  }
+  return eFrameRaw;
+}
+
+//______________________________________________________________________________
+DMRFrameRaw *DMRRun::GetFrameRaw(const char *cut)
+{
+  if(SetFrames())
+  {
+    eFrames->Draw(">>lst", cut );
+    TEventList *lst = (TEventList*)(gDirectory->GetList()->FindObject("lst"));
+    if(lst) 
+    {
+      int n =lst->GetN();
+      //Log(1,"DMRRun::GetFrameRaw","%d frames selected by cut %s",n,cut);
+      if(n==1) 
+      {
+        eFrames->GetEntry(lst->GetEntry(0));
+        return eFrameRaw;
+      }
+    }
+  }
+  return 0;
+}
+
+//______________________________________________________________________________
+TObjArray   *DMRRun::GetImagesCl(int ventr, int iz, float x0, float y0, int dx, int dy)
+{  
+  TObjArray *sarr = new TObjArray();
+  float pixX = GetHeader()->pixX;
+  float pixY = GetHeader()->pixY;
+  int   nx   = GetHeader()->npixX;
+  int   ny   = GetHeader()->npixY;
+
+  const char *cut = Form("ventr==%d&&iz==%d",ventr,iz);
+  if(SetFrames())
+  {
+	  eFrames->Draw(">>lst", cut );
+      TEventList *lst = (TEventList*)(gDirectory->GetList()->FindObject("lst"));
+      if(!lst) { Log(1,"DMRRun::GetFrameRaw","ERROR!: events list (lst) did not found!"); return sarr;}
+      int n =lst->GetN();
+	  Log(1,"DMRRun::GetFrameRaw","%d frames selected by cut %s",n,cut);
+	  if(n)
+	  {
+		  TObjArray *arr = new TObjArray();
+		    TArrayF ap(n);
+			TArrayI ind(n);
+		  for(int i=0; i<n; i++) 
+		  {
+			  eFrames->GetEntry(lst->GetEntry(i));
+			  ap[i] = eFrameRaw->pol;
+			  ind[i] = i;
+        int x = (int)((x0-eFrameRaw->x)/pixX + nx/2);
+        int y = (int)((y0-eFrameRaw->y)/pixY + ny/2);
+			  arr->Add( eFrameRaw->ExtractFragment(x,y,dx,dy) );
+		  }
+		  Sort( n, ap.GetArray(), ind.GetArray(), 0 );
+          
+		  for(int i=0; i<n; i++ ) sarr->Add( arr->At(ind[i]) );
+          delete arr;
+          return sarr;
+	  }	  
+  }
+  return sarr;
+}
+
+//______________________________________________________________________________
+DMRImageCl  *DMRRun::GetCLIM(  int iv, int icl, int ipol, int dr )
+{
+  float pixX = GetHeader()->pixX;
+  float pixY = GetHeader()->pixY;
+  int   nx   = GetHeader()->npixX;
+  int   ny   = GetHeader()->npixY;
+  DMRView	        *v = GetEntry( iv,1,1,1,1,1,1 );  if(!v) return 0;
+  DMRViewHeader   *hd = v->GetHD();                 if(!hd) return 0;
+  DMRCluster      *cl = v->GetCL(icl);              if(!cl) return 0;
+  DMRFrame        *frcl = v->GetFR(cl->ifr);        if(!frcl) return 0;
+  DMRFrameRaw     *frr = GetFrameRaw( Form("ventr==%d&&iz==%d&&ipol==%d&&flags==0",iv,frcl->iz,ipol) );
+
+  if(frr)
+  {
+    DMRFrame        *fr  = v->GetFR(frr->iz,frr->ipol);        //if(!fr) return 0;
+    int x = (int)((cl->x+hd->x-fr->x)/pixX + nx/2);
+    int y = (int)((cl->y+hd->y-fr->y)/pixY + ny/2);
+    return frr->ExtractFragment(x,y,dr,dr);
+  }
+  return 0;
+}
+
+//______________________________________________________________________________
+DMRImageCl  *DMRRun::GetGRIM(  int iv, int igr, int ipol, int dr)
+{
+  // if( !(eView && eView->HD->ID()) ) 
+  float pixX = GetHeader()->pixX;
+  float pixY = GetHeader()->pixY;
+  int   nx   = GetHeader()->npixX;
+  int   ny   = GetHeader()->npixY;
+  DMRView         *v = GetEntry( iv,1,1,1,1,1,1 );  if(!v) return 0;
+  DMRViewHeader   *hd = v->GetHD();                 if(!hd) return 0;
+  DMRGrain        *gr = v->GetGR(igr);              if(!gr) return 0;
+  DMRCluster      *cl = v->GetCL(gr->ibfc);         if(!cl) return 0;
+  DMRFrame        *frcl = v->GetFR(cl->ifr);        if(!frcl) return 0;
+  DMRFrameRaw     *frr = GetFrameRaw( Form("ventr==%d&&iz==%d&&ipol==%d&&flags==0",iv,frcl->iz,ipol) );
+
+  if(frr)
+  {
+    DMRFrame        *fr  = v->GetFR(frr->iz,frr->ipol);        //if(!fr) return 0;
+    int x = (int)((cl->x+hd->x-fr->x)/pixX + nx/2);
+    int y = (int)((cl->y+hd->y-fr->y)/pixY + ny/2);
+//    int x = (int)((cl->x+hd->x-frcl->x)/pixX + nx/2);
+//    int y = (int)((cl->y+hd->y-frcl->y)/pixY + ny/2);
+    return frr->ExtractFragment(x,y,dr,dr);
+  }
+  return 0;
+}
+
+//______________________________________________________________________________
+TObjArray  *DMRRun::GetGRCLs(  int iv, int igr, int ipol, int dr )
+{
+  float pixX = GetHeader()->pixX;
+  float pixY = GetHeader()->pixY;
+  int   nx   = GetHeader()->npixX;
+  int   ny   = GetHeader()->npixY;
+  DMRView         *v = GetEntry( iv,1,1,1,1,1,1 );  if(!v) return 0;
+  DMRViewHeader   *hd = v->GetHD();                 if(!hd) return 0;
+  DMRGrain        *gr = v->GetGR(igr);              if(!gr) return 0;
+  DMRCluster      *cl = v->GetCL(gr->ibfc);         if(!cl) return 0;
+  DMRFrame        *frcl = v->GetFR(cl->ifr);        if(!frcl) return 0;
+  TObjArray       *clarr_in = v->GetClusters( cl->x, cl->y, Abs(dr*pixX), Abs(dr*pixY), frcl->iz, ipol);
+  TObjArray       *clarr_out = new TObjArray();
+  for( int i=0; i<clarr_in->GetEntries(); i++ )
+  {
+    DMRCluster *c = new DMRCluster(*((DMRCluster*)(clarr_in->At(i))));
+    DMRFrame   *f = v->GetFR(c->ifr);
+    c->x = ((c->x+hd->x)-f->x)/pixX + nx/2;
+    c->y = ((c->y+hd->y)-f->y)/pixY + ny/2;
+    clarr_out->Add(c);
+  }
+//  for( int i=0; i<clarr->GetEntries(); i++ )
+//    ((DMRCluster*)(clarr->At(i)))->ToPixels(pixX,pixY, GetHeader()->npixX/2, GetHeader()->npixY/2);
+  return clarr_out;
+}
+
+//______________________________________________________________________________
+TObjArray  *DMRRun::GetCLCLs(  int iv, int icl, int ipol, int dr )
+{
+  float pixX = GetHeader()->pixX;
+  float pixY = GetHeader()->pixY;
+  int   nx   = GetHeader()->npixX;
+  int   ny   = GetHeader()->npixY;
+  DMRView         *v = GetEntry( iv,1,1,1,1,1,1 );  if(!v) return 0;
+  DMRViewHeader   *hd = v->GetHD();                 if(!hd) return 0;
+  DMRCluster      *cl = v->GetCL(icl);              if(!cl) return 0;
+  DMRFrame        *frcl = v->GetFR(cl->ifr);        if(!frcl) return 0;
+  TObjArray       *clarr_in = v->GetClusters( cl->x, cl->y, Abs(dr*pixX), Abs(dr*pixY), frcl->iz, ipol);
+  TObjArray       *clarr_out = new TObjArray();
+  for( int i=0; i<clarr_in->GetEntries(); i++ )
+  {
+    DMRCluster *c = new DMRCluster(*((DMRCluster*)(clarr_in->At(i))));
+    DMRFrame   *f = v->GetFR(c->ifr);
+    c->x = ((c->x+hd->x)-f->x)/pixX + nx/2;
+    c->y = ((c->y+hd->y)-f->y)/pixY + ny/2;
+    clarr_out->Add(c);
+  }
+  return clarr_out;
+}
+//______________________________________________________________________________
+DMRImageCl  *DMRRun::GetGRIMBFC(  int iv, int igr, int ipol, int dr, int x0, int y0)
+{
+  // if( !(eView && eView->HD->ID()) ) 
+  float pixX = GetHeader()->pixX;
+  float pixY = GetHeader()->pixY;
+  int   nx   = GetHeader()->npixX;
+  int   ny   = GetHeader()->npixY;
+  //int x,y;
+  DMRView         *v = GetEntry( iv,1,1,1,1,1,1 );  if(!v) return 0;
+  DMRViewHeader   *hd = v->GetHD();                 if(!hd) return 0;
+  DMRGrain        *gr = v->GetGR(igr);              if(!gr) return 0;
+  DMRCluster      *cl = v->GetCL(gr->ibfc);         if(!cl) return 0;
+  DMRFrame        *frcl = v->GetFR(cl->ifr);        if(!frcl) return 0;
+  DMRFrameRaw     *frr = GetFrameRaw( Form("ventr==%d&&iz==%d&&ipol==%d&&flags==0",iv,frcl->iz,ipol) );
+
+  if(frr)
+  {
+    DMRFrame        *fr  = v->GetFR(frr->iz,frr->ipol);        //if(!fr) return 0;
+    /*if(ipol==0){
+      x = (int)((cl->x+hd->x-fr->x)/pixX + nx/2);
+      y = (int)((cl->y+hd->y-fr->y)/pixY + ny/2);
+    }*/
+    /* else{
+      x = (int)((cl->x+hd->x-fr->x)/pixX + nx/2 - (cl->x+hd->x-fr->x)/pixX + nx/2 -x0);
+      y = (int)((cl->y+hd->y-fr->y)/pixY + ny/2 - (cl->y+hd->y-fr->y)/pixY + ny/2 -y0);
+    }*/
+//    int x = (int)((cl->x+hd->x-frcl->x)/pixX + nx/2);
+//    int y = (int)((cl->y+hd->y-frcl->y)/pixY + ny/2);
+    return frr->ExtractFragment(x0,y0,dr,dr);
+  }
+  return 0;
+}
+
+//______________________________________________________________________________
+DMRImageCl  *DMRRun::GetCLIMBFC(  int iv, int icl, int ipol, int dr, int x0, int y0)
+{
+  // if( !(eView && eView->HD->ID()) ) 
+  float pixX = GetHeader()->pixX;
+  float pixY = GetHeader()->pixY;
+  int   nx   = GetHeader()->npixX;
+  int   ny   = GetHeader()->npixY;
+  //int x,y;
+  DMRView         *v = GetEntry( iv,1,1,1,1,1,1 );  if(!v) return 0;
+  DMRViewHeader   *hd = v->GetHD();                 if(!hd) return 0;
+  DMRCluster      *cl = v->GetCL(icl);              if(!cl) return 0;
+  DMRFrame        *frcl = v->GetFR(cl->ifr);        if(!frcl) return 0;
+  DMRFrameRaw     *frr = GetFrameRaw( Form("ventr==%d&&iz==%d&&ipol==%d&&flags==0",iv,frcl->iz,ipol) );
+
+  if(frr)
+  {
+    DMRFrame        *fr  = v->GetFR(frr->iz,frr->ipol);        //if(!fr) return 0;
+    /*if(ipol==0){
+      x = (int)((cl->x+hd->x-fr->x)/pixX + nx/2);
+      y = (int)((cl->y+hd->y-fr->y)/pixY + ny/2);
+    }*/
+    /* else{
+      x = (int)((cl->x+hd->x-fr->x)/pixX + nx/2 - (cl->x+hd->x-fr->x)/pixX + nx/2 -x0);
+      y = (int)((cl->y+hd->y-fr->y)/pixY + ny/2 - (cl->y+hd->y-fr->y)/pixY + ny/2 -y0);
+    }*/
+//    int x = (int)((cl->x+hd->x-frcl->x)/pixX + nx/2);
+//    int y = (int)((cl->y+hd->y-frcl->y)/pixY + ny/2);
+    return frr->ExtractFragment(x0,y0,dr,dr);
+  }
+  return 0;
+}
