@@ -4,6 +4,7 @@
 #include <iostream>
 #include "TMarker.h"
 #include "TText.h"
+#include "TLatex.h"
 #include <vector>
 
 using namespace TMath;
@@ -122,6 +123,7 @@ void bfcl(int iv, int igr, int dr, int cl0,int cl1,int cl2,int cl3,int cl4,int c
 
   for(int i=0;i<8;i++){
     if(cl_id[i]!=-1){
+      
       DMRImageCl *im    = run->GetCLIM(iv,cl_id[i],i,dr);
       if(im){
 	h[i] = im->GetHist2();
@@ -174,13 +176,20 @@ void bfcl(int iv, int igr, int dr, int cl0,int cl1,int cl2,int cl3,int cl4,int c
   
   float min_el = TMath::MinElement(8,mincont);
   float min_elS = TMath::MinElement(8,mincontS);
+  bool scl = false;
 
   TCanvas *cnv = new TCanvas("cnv","cnv",1200,900);
   cnv->Divide(4,3);
 
+  TCanvas *cnvS = new TCanvas("cnvS","cnvS",900,900);
+  cnvS->Divide(3,3);
+
+  TCanvas *c1S = new TCanvas("c1S","Dynamic Scaled Images",200,10,600,600);
+  const char gif[30];  
+
   for(int i=0;i<8;i++){
 
-    //hs[i]->Reset(0);
+    hs[i]->Reset(0);
 
     if(cl_id[i]!=-1){
     
@@ -198,17 +207,61 @@ void bfcl(int iv, int igr, int dr, int cl0,int cl1,int cl2,int cl3,int cl4,int c
     if(im){
       TObjArray  *acl = run->GetCLCLs( iv,cl_id[i],i,dr );  //clusters
       cnv->cd(i+1)->SetGrid();
-      h[i] = drawimcls( im,acl,igr,cl_id[i] );     
+      scl=false;
+      h[i] = drawimcls( im,acl,igr,cl_id[i],scl);     
       h[i]->SetBinContent(2,2*dr-1,tmp_max);
       h[i]->SetBinContent(2,2,min_el);
       h[i]->SetTitle(Form("ipol %d cl %d in frame %d at xyz: %.2f %.2f %.2f",cl->ipol,cl->ID(),fr->iz,cl->x,cl->y, cl->z));
       h[i]->SetName(Form("cl%df%d",cl->ID(),cl->ifr));
-
-      hs[i]->SetBinContent(2,2*dr-1,tmp_maxS);
-      hs[i]->SetBinContent(2,2,min_elS);
-      hs[i]->SetTitle(Form("ipol %d cl %d in frame %d at xyz: %.2f %.2f %.2f",cl->ipol,cl->ID(),fr->iz,cl->x,-cl->y, cl->z));
-      hs[i]->SetName(Form("Scl cl%df%d",cl->ID(),cl->ifr));
-      
+      scl=true;
+      for(int j=0;j<2;j++){
+	if(j==0){
+	  cnvS->cd(i+1)->SetGrid();
+	  hs[i] = drawimcls( im,acl,igr,cl_id[i],scl);
+	  for(int k=0;k<6;k++){
+	    if(k==0){
+	      if(hs[i]->GetMaximum()<br[1])hs[i]->Scale(1./brM[i][0]);
+	    }
+	    if(k>0 && k<5){
+	      if(hs[i]->GetMaximum()>=br[k] && hs[i]->GetMaximum()<br[k+1])hs[i]->Scale(1./brM[i][k]);
+	    }
+	    if(k==5){
+	      if(hs[i]->GetMaximum()>=br[5])hs[i]->Scale(1./brM[i][5]);
+	    }
+	  }
+	  hs[i]->SetBinContent(2,2*dr-1,tmp_maxS);
+	  hs[i]->SetBinContent(2,2,min_elS);
+	  hs[i]->SetTitle(Form("ipol %d cl %d in frame %d at xyz: %.2f %.2f %.2f",cl->ipol,cl->ID(),fr->iz,cl->x,-cl->y, cl->z));
+	  hs[i]->SetName(Form("Scl cl%df%d",cl->ID(),cl->ifr));
+	}
+	
+	if(j==1){
+	  c1S->cd();
+	  hs[i] = drawimcls( im,acl,igr,cl_id[i],scl);
+	  for(int k=0;k<6;k++){
+	    if(k==0){
+	      if(hs[i]->GetMaximum()<br[1])hs[i]->Scale(1./brM[i][0]);
+	    }
+	    if(k>0 && k<5){
+	      if(hs[i]->GetMaximum()>=br[k] && hs[i]->GetMaximum()<br[k+1])hs[i]->Scale(1./brM[i][k]);
+	    }
+	    if(k==5){
+	      if(hs[i]->GetMaximum()>=br[5])hs[i]->Scale(1./brM[i][5]);
+	    }
+	  }
+	  hs[i]->SetBinContent(2,2*dr-1,tmp_maxS);
+	  hs[i]->SetBinContent(2,2,min_elS);
+	  hs[i]->SetTitle(Form("ipol %d cl %d in frame %d at xyz: %.2f %.2f %.2f",cl->ipol,cl->ID(),fr->iz,cl->x,-cl->y, cl->z));
+	  hs[i]->SetName(Form("Scl cl%df%d",cl->ID(),cl->ifr));
+	  c1S->Modified();
+	  c1S->Update();
+	  sprintf(gif,"scl_pict_%.3d_%.3d_%d.gif",iv,igr,i); // add
+	  c1S->SaveAs(gif);                         // add
+	  //c1S->Print("file.gif+20");
+	  if (gSystem->ProcessEvents()) break;
+	}
+	
+      }
       TText *t = new TText();
       t->SetTextSize(0.1);
       t->SetTextColor(1);
@@ -298,8 +351,9 @@ void bfcl(int iv, int igr, int dr, int cl0,int cl1,int cl2,int cl3,int cl4,int c
 	ycp2[i] = ycp2[i-1];
       }
     }
+    }
   }
-  }
+  
   float xlim2[2]={FLT_MAX,-FLT_MAX};
   float ylim2[2]={FLT_MAX,-FLT_MAX};
   float xlim[2]={FLT_MAX,-FLT_MAX};
@@ -532,8 +586,8 @@ void bfcl(int iv, int igr, int dr, int cl0,int cl1,int cl2,int cl3,int cl4,int c
   leg2->Draw();
 
   
-  TVirtualPad* p1;
-  p1 = cnv->cd(10);
+  cnv->cd(10)->SetGrid();
+
   for(int i=1;i>=0; i--)
   {
     xlim[i]-=xlim[0];
@@ -555,6 +609,7 @@ void bfcl(int iv, int igr, int dr, int cl0,int cl1,int cl2,int cl3,int cl4,int c
   else maxygr = TMath::MaxElement(ncp,ycp);
   if(maxygr2>=maxygr)max_xygr=maxygr2;
   else max_xygr=maxygr;
+
   
   TMultiGraph *mg3 = new TMultiGraph();
   //TGraph *gxy2 = new TGraph(ncp,xcp2,ycp2);
@@ -589,147 +644,89 @@ void bfcl(int iv, int igr, int dr, int cl0,int cl1,int cl2,int cl3,int cl4,int c
    gxy2->GetXaxis()->SetLimits(-10,1.2*max_xygr);
    gxy2->GetYaxis()->SetLimits(-10,1.2*max_xygr);
    mg3->Add(gxy2);
-  gxy->SetMarkerStyle(22);
-  gxy->Draw("LP");
-  //gxy->SetMarkerColor(kGreen);
-  mg3->Add(gxy);
-  mg3->Draw("ALP");
-  mg3->SetTitle("xy path");
-  mg3->GetXaxis()->SetTitle("x [nm]");
-  mg3->GetYaxis()->SetTitle("y [nm]");
-  mg3->GetYaxis()->SetTitleOffset(1.4);
-  mg3->GetXaxis()->SetLimits(-10,1.2*max_xygr);
-  mg3->GetYaxis()->SetLimits(-10,1.2*max_xygr);
-  leg3 = new TLegend(0.1,0.7,0.48,0.9);
-  leg3->SetName(Form("id_path_%.3d_%.3d",iv,igr));
+   gxy->SetMarkerStyle(22);
+   gxy->Draw("LP");
+   mg3->Add(gxy);
+   mg3->Draw("ALP");
+   mg3->SetTitle("xy path");
+   mg3->GetXaxis()->SetTitle("x [nm]");
+   mg3->GetYaxis()->SetTitle("y [nm]");
+   mg3->GetYaxis()->SetTitleOffset(1.4);
+   mg3->GetXaxis()->SetLimits(-10,1.2*max_xygr);
+   mg3->GetYaxis()->SetLimits(-10,1.2*max_xygr);
+   leg3 = new TLegend(0.1,0.7,0.48,0.9);
+   leg3->SetName(Form("id_path_%.3d_%.3d",iv,igr));
   //leg3->SetHeader("");
   leg3->AddEntry(gxy2,"xy - bar","p");
   leg3->AddEntry(gxy,"xy - bfc","p");
   leg3->Draw();
-
+  
   // Draw labels on the y axis
+  //TLatex *l;// = new TLatex();
+  //char *iPol[8] = {"0","22.5","45","67.5","90","112.5","135","157.5"};
+  char *iPol[8] = {"0","22.5","45","67.5","90","112.5","135","167.5"};
   TText *t = new TText();
   t->SetTextAlign(32);
   t->SetTextSize(0.035);
   t->SetTextFont(72);
   t->SetTextColor(kRed);
-  //char *iPol[8] = {"0","22.5","45","67.5","90","112.5","135","157.5"};
-  char *iPol[8] = {"0","1","2","3","4","5","6","7"};
+  
   for (Int_t i=0;i<8;i++) {
+    //gxy2->GetPoint(i,xcp2[i],ycp2[i]);
+    //l = new TLatex(xcp2[i],ycp2[i]+1,iPol[i]);
     t->DrawText(xcp2[i],ycp2[i]+1,iPol[i]);
   }
-
+  
   //cout << ncp << " " << nrmv << endl;
   cnv->cd(12)->SetGrid();
   hsum->Scale(1./(ncp-nrmv));
   hsum->SetContour(64);
   hsum->Draw("colz");
 
+  cnvS->cd(9)->SetGrid();
+  hsumS->Scale(1./8.);
+  hsumS->Draw("colz");
 
-  //TFile *fout = new TFile(Form("xy_path_%.3d_%.3d.root",iv,igr),"RECREATE"); 
-  //fout-> cd();
-  //gxy2->Write(Form("xy_path_%.3d_%.3d",iv,igr));
-  //leg3->Write();
-  //delete fout;
-  //delete t;
-
-  
+  cnv->SaveAs(Form("info_%.3d_%.3d.png",iv,igr));
+  cnvS->SaveAs(Form("cnv_%.3d_%.3d.png",iv,igr));
 
   
-  TCanvas *cnv2 = new TCanvas("cnv2","cnv2",1200,900);
-  cnv2->Divide(4,3);
-  
-
-  for(int i=0;i<8;i++){
-    if(!rmv_pnt[i]){
-      //cout << "hllo " << i << " " << mincont[i] << endl;
-      h2[i] = (TH2F*)(hs[i]->Clone(""));
-      //h2[i]->Scale((h[i]->GetMaximum()*min_el[0])/(min_el[i]*h[0]->GetMaximum()));
-      h2[i]->Add(hsum,-1);
-      if(h2[i]->GetMaximum()>tmp_max2)tmp_max2 = h2[i]->GetMaximum();
-      if(h2[i]->GetMinimum()<tmp_min2)tmp_min2 = h2[i]->GetMinimum();
-      }
+  //TFile *fout = new TFile(Form("xy_path_%.3d_%.3d.root",iv,igr),"RECREATE");
+  //fout->cd();
+  TGraph *gxy3 = new TGraph();
+  gxy3->SetName(Form("xy_path_%.3d_%.3d",iv,igr));
+  TCanvas *cpad = new TCanvas(Form("cnv_xy_path_%.3d_%.3d",iv,igr));   //creates new canvas
+  for(int k=0;k<8;k++){
+    gxy3->SetPoint(k,xcp2[k],ycp2[k]);
   }
-  
-  for(int i=0;i<8;i++){
-    if(!rmv_pnt[i]){
-      cnv2->cd(i+1)->SetGrid();
-      h2[i]->SetBinContent(2,2*dr-1,tmp_max2);
-      h2[i]->SetBinContent(2,2,tmp_min2);
-      h2[i]->Draw("colz");
-    }
-    }
-  
-
-  const char gifS[30];
-  TCanvas *cnvS = new TCanvas("cnvS","cnvS",1200,900);
-  cnvS->Divide(3,3);
-  
-  for(int i=0;i<9;i++){
-    cnvS->cd(i+1)->SetGrid();
-    if(i!=8)hs[i]->Draw("colz");
-    else {
-      hsumS->Scale(1./8.);
-      hsumS->Draw("colz");
-    }
-    cnvS->Modified();
-    cnvS->Update();
-    sprintf(gifS,"cnv_%.3d_%.3d.gif",iv,igr); // add
-    cnvS->SaveAs(gifS);                         // add
-    cnvS->Print("file.gif+50");
-    if (gSystem->ProcessEvents()) break;
+  gxy3->SetPoint(8,xcp2[0],ycp2[0]);
+  //TAxis *axis = gxy3->GetXaxis();
+  //axis->SetLimits(-10,1.5*maxygr2);
+  gxy3->GetXaxis()->SetLimits(-20,1.5*maxygr2);
+  //gxy3->GetYaxis()->SetLimits(-20,1.5*maxygr2);
+  gxy3->Draw("ALP");
+  gxy3->SetMarkerColor(kBlue+1);
+  gxy3->SetMarkerStyle(21);
+  gxy3->SetLineWidth(2);
+  //gxy2->GetXaxis()->SetRangeUser(-10,1.2*maxygr2);
+  gxy3->GetYaxis()->SetRangeUser(-20,1.5*maxygr2);
+  gxy3->GetXaxis()->SetTitle("x [nm]");
+  gxy3->GetYaxis()->SetTitle("y [nm]");
+  for(int k=0;k<8;k++){
+    t->DrawText(xcp2[k],ycp2[k]+1,iPol[k]);
   }
-
-  
-  const char gif[30];
-  /*TCanvas *c1 = new TCanvas("c1","Dynamic Filling Example",200,10,700,500);
-  ///////////////
-  for(int ic=0;ic<8;ic++){
-    if(rmv_pnt[ic]==false){
-    h[ic]->Draw("colz");
-    c1->Modified();
-    c1->Update();
-    sprintf(gif,"pict_%.3d_%.3d.gif",iv,ic); // add
-    c1->SaveAs(gif);                         // add
-    c1->Print("file.gif+50");
-    if (gSystem->ProcessEvents()) break;
-    }
-  }
-  c1->Print("file.gif++50++");
-  ///////////////
-  gSystem->Exec(Form("gifsicle --delay=20 --loop *.gif > gif/anim%d_%d.gif",iv,igr));
-  gSystem->Exec("rm pict_*");
-  */
-  
-  
-  TCanvas *c1S = new TCanvas("c1S","Dynamic Scaled Images",200,10,700,500);
-  for(int ic=0;ic<8;ic++){
-    if(rmv_pnt[ic]==false){
-      hs[ic]->Draw("colz");
-      c1S->Modified();
-      c1S->Update();
-      sprintf(gif,"scl_pict_%.3d_%.3d.gif",iv,igr); // add
-      c1S->SaveAs(gif);                         // add
-      c1S->Print("file.gif+50");
-      if (gSystem->ProcessEvents()) break;
-    }
-  }
-  //char cnv_name[30];
-  //sprintf(cnv_name,"cnv_%.3d_%.3d.gif",iv,igr); // add
-  //c1S->SaveAs(cnv_name);
-
-  TPad *pnew = p1->Clone();
-  TCanvas *cpad = new TCanvas(Form("xy_path_%.3d_%.3d.root",iv,igr));   //creates new canvas
-  cpad->Divide(1,1);
-  p1->Draw(); 
+  cpad->Draw("");
   cpad->SaveAs(Form("xy_path_%.3d_%.3d.root",iv,igr));
+  delete cpad;
   
-  //mg3->SaveAs(Form("xy_path_%.3d_%.3d.root",iv,igr));
+
   gSystem->Exec("mv xy_path_* gif/");
   gSystem->Exec("mv cnv_* gif/");
-  gSystem->Exec(Form("gifsicle --delay=20 --loop *.gif > gif/scl_anim%.3d_%.3d.gif",iv,igr));
+  gSystem->Exec("mv info_* gif/");
+  gSystem->Exec(Form("gifsicle --delay=30 --loop *.gif > gif/scl_anim%.3d_%.3d.gif",iv,igr));
   gSystem->Exec("rm scl_*");
-
+  gSystem->Exec("rm file.gif");
+  
   cout << "GIF saved in gif/ directory" << endl;
 }
 
@@ -830,7 +827,7 @@ void mtrk(int iv, int imt, int igr1, int igr2, int dr)
 
 
 
-TH2F* drawimcls(DMRImageCl *im, TObjArray  *acl,int igr, int icl)
+TH2F* drawimcls(DMRImageCl *im, TObjArray  *acl,int igr, int icl, bool scl)
 {
   TH2F *h =0;
   if(im)
@@ -846,18 +843,19 @@ TH2F* drawimcls(DMRImageCl *im, TObjArray  *acl,int igr, int icl)
     {
       int ncl= acl->GetEntries();
       printf("ncl=%d\n",ncl);
-      
-      for(int ic=0; ic<ncl; ic++)
-      {
-        DMRCluster *c = (DMRCluster*)(acl->At(ic));
-        if(c->flags==0)
-        {
-          c->x = c->x - im->x;
-          c->y = c->y - im->y;
-	  drawCL(c,igr,icl);
-        }
-      }
-      
+
+	for(int ic=0; ic<ncl; ic++)
+	  {
+	    DMRCluster *c = (DMRCluster*)(acl->At(ic));
+	    if(c->flags==0)
+	      {
+		if(!scl){
+		  c->x = c->x - im->x;
+		  c->y = c->y - im->y;
+		}
+		drawCL(c,igr,icl);
+	      }
+	  }
     }
   }
   return h;
@@ -892,8 +890,7 @@ TH2F* drawimMT(DMRImageCl *im, TObjArray  *acl)
           c->y = c->y - im->y;
 	  drawMT(c);
         }
-      }
-      
+      }      
     }
   }
   return h;
@@ -908,12 +905,13 @@ void drawCL( DMRCluster *cl, int igr, int icl)
   float pixX = run->GetHeader()->pixX;
   float pixY = run->GetHeader()->pixY;
   TMarker *m = new TMarker(cl->x,cl->y,8);
-  m->SetMarkerColor(0);
-  if(cl->igr[cl->ID()]!=igr) m->SetMarkerColor(3);
-  if(cl->igr[cl->ID()]==igr) m->SetMarkerColor(4);
-  if(cl->ID()==icl) m->SetMarkerColor(1);
+  //m->SetMarkerColor(kBlack);
+  if(cl->igr[cl->ID()]!=igr) m->SetMarkerColor(kGreen);
+  if(cl->igr[cl->ID()]==igr) m->SetMarkerColor(kBlue);
+  if(cl->ID()==icl) m->SetMarkerColor(kBlack);
   
   m->Draw();
+  cout << "HELLO "<<cl->x << " " << cl->y  << " " << cl->ID() << " " << cl->igr[cl->ID()] << " " << igr << " " << icl << endl;
   printf("id:ifr:img:igr:imt %d:%d:%d:%d:%d  major/minor = %.3f/%.3f = %.3f\n",
          cl->ID(), cl->ifr, cl->img, cl->igr, cl->imt, cl->lx,cl->ly,cl->lx/cl->ly );
   float dxma = cl->lx*Cos(cl->phi)/2/pixX;
@@ -1043,31 +1041,57 @@ double scaling(int iv, int icl, int ipol)
 void Nbfcl(int ifrom, int ntimes)
 {
 
+  int s;
   int ind=0;
-  ifstream myfile ("bfcl8copy.txt");
+  ifstream myfile;
+  do{
+    cout << "Type: " <<endl;
+    cout << "1) if there are no cuts" << endl;
+    cout << "2) if there is a cutlist" << endl;
+    cin >> s;
+    switch(s){   
+    case(1):
+      myfile.open("bfcl8copy.txt");
+      break;
+    case(2):
+      char fname[100];
+      cout << "Enter the filename " << endl;
+      cin >> fname;
+      myfile.open(fname);
+      break;
+    default:
+      cout << "Type non correct" << endl;
+    }
+  }while((s!=1 && s!=2));
+
+  
   vector<vector<string> > runDescription;
   if (myfile.is_open()){
     string line;
     // cout << line << endl;
-    while (getline (myfile,line) && ind<ntimes && ind>=ifrom){
+    while (getline (myfile,line)){
       istringstream iss(line);
       string a;
       vector<string> tmpS;
-      while(!iss.eof()){     
-	iss>>a;
-	tmpS.push_back(a);
-	//cout << a << " ";
-     }
-      //cout << endl;
-      runDescription.push_back(tmpS);
-      tmpS.clear();
+      if(ind>=ifrom && ind<(ntimes+ifrom)){
+	while(!iss.eof()){
+	  cout << ifrom << " " << ntimes << " " << ind << endl;
+	  iss>>a;
+	  tmpS.push_back(a);
+	  cout << a << " ";
+	}
+	cout << endl;
+	runDescription.push_back(tmpS);
+	tmpS.clear();
+      }
       ind++;
+      
     }
     myfile.close();
     
   }
   
-  for(int i = 0; i< runDescription.size();i++){
+  for(int i =0; i< runDescription.size();i++){
     int nstring  = runDescription[i].size();
     char row[100];
     // cout << endl;
@@ -1076,6 +1100,10 @@ void Nbfcl(int ifrom, int ntimes)
        gROOT->ProcessLine(TString::Format("%s",text));
     }
   }
+  gSystem->Exec("hadd all_xy_path.root gif/xy_path*");
+  gSystem->Exec("mv all_xy_path.root gif/");
+  gSystem->Exec("rm AutoDict_vector_vector_string_allocator_string_____*
+");
   
 }
 

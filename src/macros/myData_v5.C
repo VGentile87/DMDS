@@ -24,6 +24,9 @@
 
 using namespace std;
 
+
+const double pi=TMath::Pi();
+
 //// SETTINGS
 double x_pix_size=0; //um
 double y_pix_size=0; //um
@@ -32,6 +35,18 @@ double thr_ldust_area =0;
 double fid_cut_par=0;
 double maxcl=0;
 const int npol=8;
+int cut_nofit=1;
+int cut_goodzone=1;
+int cut_ncl=30;
+double cut_minor=0.100;
+int cut_isolated=-1;
+int cut_npol=8;
+int cut_mtrk=-1;
+double cut_bar_l=0.03;
+double cut_reg_u=2.3;
+double cut_bar_u=1;
+double cut_reg_l=0;
+int cut_view=-1;
 //////////////
 
 ///// TREE VARIABLES /////////////
@@ -117,6 +132,8 @@ Double_t eSetMaxPol2=0;
 Double_t eSetMaxPixDist=0;
 Double_t eSetMaxBar=0;
 Double_t eSetMaxAmp=0;
+Double_t eSetRmsAmp=0;
+Double_t eSetMeanAmp=0;
 Double_t eSetXRms=0;
 Double_t eSetYRms=0;
 Double_t eSetXBar=0;
@@ -207,6 +224,16 @@ Double_t zdist=0.;
 Int_t NoClust_first=-1;
 Int_t xbin=-1;
 Int_t ybin=-1;
+////////////////////////
+const Int_t totXbin=80;
+const Int_t totYbin=80;
+Float_t new_phi_bar=0;
+Int_t ngr_cell[totXbin][totYbin];
+Float_t phi_projX[totXbin][totYbin];
+Float_t phi_projY[totXbin][totYbin];
+Float_t phi_projX_adi[totXbin][totYbin];
+Float_t phi_projY_adi[totXbin][totYbin];
+Float_t radius=0;
 
 Double_t xgrain=0;
 Double_t ygrain=0;
@@ -319,6 +346,8 @@ Double_t gr_gap_z2[kMaxgr]={};
 Double_t q_line[kMaxgr]={};
 Double_t m_line[kMaxgr]={};
 Double_t gr_max_amp[kMaxgr]={};
+Double_t gr_rms_amp[kMaxgr]={};
+Double_t gr_mean_amp[kMaxgr]={};
 Double_t maxpixdist[kMaxgr]={};
 Int_t set_first[kMaxgr]={};
 Int_t gr_fr[kMaxgr]={};
@@ -648,10 +677,54 @@ void myDatacard(char* datacard){
 	maxcl = atof( runDescription[i][2].c_str());
 	cout << "max cluster number per view to start the  analysis (no dirty view control) is "<< maxcl << endl;
       }
-      /*if(runDescription[i][j] == "npol") {
-	npol = atof( runDescription[i][2].c_str());
-	cout << "max number of polarization angles (excluding 180°) is "<< npol << endl;
-	} */
+      if(runDescription[i][j] == "cut_nofit") {
+	cut_nofit = atof( runDescription[i][2].c_str());
+	cout << "No fit cut for ellipticity equal to "<< cut_nofit << endl;
+      }
+      if(runDescription[i][j] == "cut_goodzone") {
+	cut_goodzone = atof( runDescription[i][2].c_str());
+	cout << "Boolean Good zone cut is "<< cut_goodzone << endl;
+      }
+      if(runDescription[i][j] == "cut_minor") {
+	cut_minor = atof( runDescription[i][2].c_str());
+	cout << "Lower cut on minor length is "<< cut_minor << " [um]" <<  endl;
+      }
+      if(runDescription[i][j] == "cut_ncl") {
+	cut_ncl = atof( runDescription[i][2].c_str());
+	cout << "Cut on number of merged cluster liked to a grain is "<< cut_ncl << endl;
+      }
+      if(runDescription[i][j] == "cut_mtrk") {
+	cut_mtrk = atof( runDescription[i][2].c_str());
+	cout << "Mtrk index is set to "<< cut_mtrk << endl;
+      }
+      if(runDescription[i][j] == "cut_npol") {
+	cut_npol = atof( runDescription[i][2].c_str());
+	cout << "Lower cut of number of polarization is "<< cut_npol << endl;
+      } 
+      if(runDescription[i][j] == "cut_isolated") {
+	cut_isolated = atof( runDescription[i][2].c_str());
+	cout << "Isolated index is set to "<< cut_isolated << endl;
+      }
+      if(runDescription[i][j] == "cut_bar_l") {
+	cut_bar_l = atof( runDescription[i][2].c_str());
+	cout << "Lower cut on barshift is "<< cut_bar_l << " [um]" << endl;
+      }
+      if(runDescription[i][j] == "cut_reg_l") {
+	cut_reg_l = atof( runDescription[i][2].c_str());
+	cout << "Lower cut on regularity index is "<< cut_reg_l << endl;
+      }
+      if(runDescription[i][j] == "cut_bar_u") {
+	cut_bar_u = atof( runDescription[i][2].c_str());
+	cout << "Upper cut on barshift is "<< cut_bar_u << " [um]" << endl;
+      }
+      if(runDescription[i][j] == "cut_reg_u") {
+	cut_reg_u = atof( runDescription[i][2].c_str());
+	cout << "Upper cut on regularity index is "<< cut_reg_u << endl;
+      }
+      if(runDescription[i][j] == "cut_view") {
+	cut_view = atof( runDescription[i][2].c_str());
+	cout << "Views removed "<< cut_view << endl;
+      } 
     }
   }
 }
@@ -683,8 +756,15 @@ void myData::Loop()
   //// LOG OUTPUT
   ofstream mybfcl("pred_bfcl.txt");    /// lista bfcl per ogni grano
   ofstream bfcl8("bfcl8copy.txt");     /// lista bfcl (solo 8pol) per funzioni immagini animate
+  ofstream cut8("bfcl8_with_cuts.txt");     /// lista bfcl (solo 8pol) per funzioni immagini animate con tagli
 
-  /// HISTOGRAMS 
+  /// HISTOGRAMS
+  TH2F * hradius = new TH2F("radius","",totXbin,-totXbin/2.,totXbin/2.,totYbin,-totYbin/2.,totYbin/2.);  // mappa xy della proiezione x di phi_bar
+  TH2F * hxmap = new TH2F("xmap","",totXbin,-totXbin/2.,totXbin/2.,totYbin,-totYbin/2.,totYbin/2.);  // mappa xy della proiezione x di phi_bar
+  TH2F * hymap = new TH2F("ymap","",totYbin,-totYbin/2.,totYbin/2.,totYbin,-totYbin/2.,totYbin/2.);  // mappa xy della proiezione y di phi_bar
+  TH2F * hrphimap = new TH2F("rphimap","",100,-pi/2.,pi/2.,100,0,0.1);  // mappa xy della di phi_bar ?
+  TH2F * hphimap = new TH2F("phimap","",totYbin,-totYbin/2.,totYbin/2.,totYbin,-totYbin/2.,totYbin/2.);  // mappa xy della di phi_bar ?
+  TH1F * hphicell = new TH1F("phimap_int","",100,-pi/2.,pi/2.);  // phi map integrata
   TH1F * hrdist = new TH1F("rdist","",256,0,20);  // distanza mutua tra grani dopo i cuts primari (ldust, nearby ldust, no_ell_fit, minor_cut, long_chains)
   TH1F * hrdist2 = new TH1F("rdist2","",128,0,1); // distanza tra i picchi dei grani npeaks
   TH1F * hrdist_ldust = new TH1F("rdist_ldust","",10000,0,500); // distanza di ogni grano no large dust dai grani di large dust (espressa in unità di raggio del large dust)
@@ -769,6 +849,8 @@ void myData::Loop()
   Tree_out->Branch("eSetMaxPol2",&eSetMaxPol2,"eSetMaxPol2/D");
   Tree_out->Branch("eSetMaxBar",&eSetMaxBar,"eSetMaxBar/D");
   Tree_out->Branch("eSetMaxAmp",&eSetMaxAmp,"eSetMaxAmp/D");
+  Tree_out->Branch("eSetRmsAmp",&eSetRmsAmp,"eSetRmsAmp/D");
+  Tree_out->Branch("eSetMeanAmp",&eSetMeanAmp,"eSetMeanAmp/D");
   Tree_out->Branch("eSetPhi",&eSetPhi,"eSetPhi/D");
   Tree_out->Branch("eSetPhiBar",&eSetPhiBar,"eSetPhiBar/D");
   Tree_out->Branch("eSetTheBar",&eSetTheBar,"eSetTheBar/D");
@@ -815,7 +897,7 @@ void myData::Loop()
 
     grNcl->SetPoint(jentry,viewID,ncl);
     
-    if(ncl<maxcl){   /// cut per view troppo sporche (maxcl va settato)   evita i CRASH
+    if(ncl<maxcl || jentry==cut_view){   /// cut per view troppo sporche (maxcl va settato)   evita i CRASH
       cout << jentry << " " << ncl << endl;
     
       ///////// SEARCH ENCODING FAULTS
@@ -905,16 +987,16 @@ void myData::Loop()
 	  //if(cl_igr[jn]==gr_id[in])cout  << gr_id[in] << " " << cl_igr[jn] <<  " " << cl_flags[jn] << " " << cl_ipol[jn] << endl;
 	  ///////////////////////// start if cluster-grain
 	  if(cl_igr[jn]==gr_id[in]  && cl_flags[jn]==0){  // clusters appartenenti all'iesimo grano e non mergiati, quindi collegati a specifica polarizzazione
-	  
 	    ////// MAX BRIGHTNESS PER OGNI POLARIZZAZIONE  (CERCA IL BFC DEL GRANO PER OGNI POL) --> BFC definito come il più luminoso
-	    if((cl_vol[jn]/cl_npx[jn])>tmp_vol[cl_ipol[jn]]){
-	      tmp_vol[cl_ipol[jn]]=cl_vol[jn]/cl_npx[jn];
-	      ipol_gr[in][cl_ipol[jn]]=cl_id[jn];
-	      //cout << in << " " << " " << cl_ipol[jn] << " " << ipol_gr[in][cl_ipol[jn]] << " " << fr_iz[cl_ifr[ipol_gr[in][cl_ipol[jn]]]] <<  endl;
-	      //////////// FRAME DEL BEST FOCUS CLUSTER PER OGNI POL 
-	      bfc_ifr[cl_ipol[jn]]=cl_ifr[ipol_gr[in][cl_ipol[jn]]];              // frame
-	      bfc_zfr[cl_ipol[jn]]=fr_iz[cl_ifr[ipol_gr[in][cl_ipol[jn]]]];       // zeta
-	    }
+	    if((double)cl_vol[jn]/cl_npx[jn]>tmp_vol[cl_ipol[jn]]){
+		tmp_vol[cl_ipol[jn]]=(double)cl_vol[jn]/cl_npx[jn];
+		ipol_gr[in][cl_ipol[jn]]=cl_id[jn];
+		//cout << in << " " << " " << cl_ipol[jn] << " " << ipol_gr[in][cl_ipol[jn]] << " " << fr_iz[cl_ifr[ipol_gr[in][cl_ipol[jn]]]] <<  endl;
+		//////////// FRAME DEL BEST FOCUS CLUSTER PER OGNI POL 
+		bfc_ifr[cl_ipol[jn]]=cl_ifr[ipol_gr[in][cl_ipol[jn]]];              // frame
+		bfc_zfr[cl_ipol[jn]]=fr_iz[cl_ifr[ipol_gr[in][cl_ipol[jn]]]];       // zeta
+	      }
+	    if(in==159 && viewID==0 && cl_ipol[jn]==4)cout <<"bfc_ifr "<< bfc_ifr[cl_ipol[jn]] << " " <<(double)cl_vol[jn]/cl_npx[jn] << " "<< cl_id[jn]<< endl;
 	    /////////////////////////////////////
 	  
 	  
@@ -936,8 +1018,8 @@ void myData::Loop()
 	
 	  ///// eGAP  (DISCREPANZA 0° E 180°)  /// DA VERIFICARE
 	  if(cl_igr[jn]==gr_id[in]  && cl_flags[jn]==2){   // cluster del grano con polarizzazione 180° (ovvero ripetizione di 0°)
-	    if((cl_vol[jn]/cl_npx[jn])>tmp_gap){   // prendo il più luminoso tra essi
-	      tmp_gap=cl_vol[jn]/cl_npx[jn];
+	    if((double)cl_vol[jn]/cl_npx[jn]>tmp_gap){   // prendo il più luminoso tra essi
+	      tmp_gap=(double)cl_vol[jn]/cl_npx[jn];
 	      gr_180[in]=cl_id[jn];  
 	    }
 	  }
@@ -956,7 +1038,7 @@ void myData::Loop()
 
       
 	////// MARGINI NEARBY LARGE DUST   (FATTO SUL BFC DEL GRANO)
-	if(TMath::Log10(cl_vol[gr_ibfc[in]]/cl_npx[gr_ibfc[in]])>thr_ldust_br || TMath::Log10(cl_npx[gr_ibfc[in]])>thr_ldust_area){
+	if(TMath::Log10((double)cl_vol[gr_ibfc[in]]/cl_npx[gr_ibfc[in]])>thr_ldust_br || TMath::Log10(cl_npx[gr_ibfc[in]])>thr_ldust_area){
 	  ldust[in]=true;
 	  cut_area[iLarge_dust][0]=grain_Ox[in]+x-fiducial_cut;
 	  cut_area[iLarge_dust][1]=grain_Oy[in]+y-fiducial_cut;
@@ -1056,6 +1138,8 @@ void myData::Loop()
 	      //cout <<in << " " << cl_ipol[jn] << " " <<  max_fr << " " << bfc_zfr[cl_ipol[jn]] << " " << fr_iz[cl_ifr[jn]] << endl;
 	      if(fr_iz[cl_ifr[jn]]==max_fr && bfc_zfr[cl_ipol[jn]]!=max_fr){ // se il bfclfr non coincide con quello di massima molteplicità
 		ipol_gr[in][cl_ipol[jn]]=cl_id[jn];                          // rimpiazza quest'ultimo al posto del precedente
+		bfc_ifr[cl_ipol[jn]]=cl_ifr[ipol_gr[in][cl_ipol[jn]]];              // frame
+		bfc_zfr[cl_ipol[jn]]=fr_iz[cl_ifr[ipol_gr[in][cl_ipol[jn]]]];
 		bfc_gap[in]=1;                                               // segnalo che c'era un gap nei bfclfr
 		//cout << max_fr << " " << bfc_zfr[cl_ipol[jn]] << " " << fr_iz[cl_ifr[jn]] << endl;
 	      }
@@ -1099,7 +1183,7 @@ void myData::Loop()
 	  ////// start frame //////////////// (MOLTEPLICITA' BEST FOCUS CLUSTER FRAME - SAME_FRAME==2)
 	  if(cl_igr[jn]==gr_id[in]  && cl_flags[jn]==0){
 	    if(cl_ifr[jn]==bfc_ifr[cl_ipol[jn]] && jn!=ipol_gr[in][cl_ipol[jn]])same_frame[in][cl_ipol[jn]]=2;
-	    //cout << in << " " << jn << " " << ipol_gr[in][cl_ipol[jn]] << " " <<  cl_ipol[jn]  << " " << bfc_ifr[cl_ipol[jn]] << " " << cl_ifr[jn] << " " << tmp_same_frame[cl_ipol[jn]] << " " << same_frame[in][cl_ipol[jn]] << endl;	  
+	    if(viewID==0&&in==159)cout << in << " " << jn << " " << ipol_gr[in][cl_ipol[jn]] << " " <<  cl_ipol[jn]  << " " << bfc_ifr[cl_ipol[jn]] << " " << cl_ifr[jn] << " " << tmp_same_frame[cl_ipol[jn]] << " " << same_frame[in][cl_ipol[jn]] << endl;	  
 	  }
 	  //////////// end frame
 	}
@@ -1193,6 +1277,7 @@ void myData::Loop()
 	Double_t *gr_angpol = new Double_t[gr_copy[in]];
 	Double_t *gr_npx_pol = new Double_t[gr_copy[in]];
 	Double_t *gr_pol_id = new Double_t[gr_copy[in]];
+	Double_t *gr_amp = new Double_t[gr_copy[in]];
 	Double_t *gr_step = new Double_t[npol];
 
 	q_line[in]=0;
@@ -1289,6 +1374,7 @@ void myData::Loop()
 
 	////////////////////// MAX AMPLITUDE    (distanza massima di un bfcl dalla retta che collega i bfc che danno origine alla massima distanza)
 	for(int iset = 0;iset<index_pol;iset++){
+	   gr_amp[iset]=TMath::Abs((gr_y_pol_bar[iset]) - (m_line[in]*gr_x_pol_bar[iset] + q_line[in]))/(TMath::Sqrt(1+m_line[in]*m_line[in]));
 	  if(TMath::Abs((gr_y_pol_bar[iset]) - (m_line[in]*gr_x_pol_bar[iset] + q_line[in]))/(TMath::Sqrt(1+m_line[in]*m_line[in]))>gr_max_amp[in]) gr_max_amp[in]=TMath::Abs((gr_y_pol_bar[iset]) - (m_line[in]*gr_x_pol_bar[iset] + q_line[in]))/(TMath::Sqrt(1+m_line[in]*m_line[in]));
 	  //cout << in << " " << gr_maxpol1[in] << " " << gr_maxpol2[in] << " " << gr_pol_id[iset] << " " << q_line[in] << " " << m_line[in] << " " << gr_x_pol_bar[iset] << " " << gr_y_pol_bar[iset] << " " << gr_max_amp[in] << endl; 
 	}
@@ -1328,7 +1414,10 @@ void myData::Loop()
 	gr_mean_path[in] = TMath::Mean(npol,gr_step);
 	gr_rms_path[in] = TMath::RMS(npol,gr_step);
 	gr_max_path[in] = TMath::MaxElement(npol,gr_step);
-      
+	gr_rms_amp[in] = TMath::RMS(index_pol,gr_amp);
+	gr_mean_amp[in] = TMath::Mean(index_pol,gr_amp);
+
+	delete [] gr_amp;
 	delete [] gr_step;
 	delete [] delta_phi_pol;
 	delete [] gr_phi_pol;
@@ -1347,25 +1436,31 @@ void myData::Loop()
 
 	/////// OUTPUT ////////////////
 	mybfcl << "View: "<< viewID << " - Grain ID: " << in << " - # Elements: " << index_pol << endl;
-	mybfcl << "bfcl("<<viewID << "," << in << ",20,";
-	if(gr_copy[in]==npol)bfcl8 << "bfcl("<<viewID << "," << in << ",20,";
+	mybfcl << "bfcl("<<viewID << "," << in << ",40,";
+	if(gr_copy[in]==npol)bfcl8 << "bfcl("<<viewID << "," << in << ",40,";
+	if(gr_copy[in]==cut_npol && gr_lx[in]/gr_ly[in]!=cut_nofit && grain[in]==cut_goodzone && gr_ly[in]>=cut_minor && gr_ncl[in]<cut_ncl && gr_imt[in]==cut_mtrk && gr_isolated[in]==cut_isolated && gr_max_dist_bar[in]>cut_bar_l && gr_max_dist_bar[in]<cut_bar_u &&  gr_path[in]/gr_max_dist_bar[in]>cut_reg_l && gr_path[in]/gr_max_dist_bar[in]<cut_reg_u)cut8 << "bfcl("<<viewID << "," << in << ",40,";
 	for(int k=0;k<npol;k++){
 	  if(k<7){
 	    mybfcl <<sort_gr[k] << ",";
 	    if(gr_copy[in]==npol)bfcl8 <<sort_gr[k] << ",";
+	    if(gr_copy[in]==cut_npol && gr_lx[in]/gr_ly[in]!=cut_nofit && grain[in]==cut_goodzone && gr_ly[in]>=cut_minor && gr_ncl[in]<cut_ncl && gr_imt[in]==cut_mtrk && gr_isolated[in]==cut_isolated && gr_max_dist_bar[in]>cut_bar_l && gr_max_dist_bar[in]<cut_bar_u &&  gr_path[in]/gr_max_dist_bar[in]>cut_reg_l && gr_path[in]/gr_max_dist_bar[in]<cut_reg_u)cut8 <<sort_gr[k] << ",";
 	  }
 	  if(k==7){
 	    mybfcl <<sort_gr[k] << ")";
 	    if(gr_copy[in]==npol)bfcl8 <<sort_gr[k] << ")";
+	    if(gr_copy[in]==cut_npol && gr_lx[in]/gr_ly[in]!=cut_nofit && grain[in]==cut_goodzone && gr_ly[in]>=cut_minor && gr_ncl[in]<cut_ncl && gr_imt[in]==cut_mtrk && gr_isolated[in]==cut_isolated && gr_max_dist_bar[in]>cut_bar_l && gr_max_dist_bar[in]<cut_bar_u &&  gr_path[in]/gr_max_dist_bar[in]>cut_reg_l && gr_path[in]/gr_max_dist_bar[in]<cut_reg_u)cut8 <<sort_gr[k] << ")";
 	  }
 	}
 	mybfcl << endl;
 	if(gr_copy[in]==npol)bfcl8 << endl;
+        if(gr_copy[in]==cut_npol && gr_lx[in]/gr_ly[in]!=cut_nofit && grain[in]==cut_goodzone && gr_ly[in]>=cut_minor && gr_ncl[in]<cut_ncl && gr_imt[in]==cut_mtrk && gr_isolated[in]==cut_isolated && gr_max_dist_bar[in]>cut_bar_l && gr_max_dist_bar[in]<cut_bar_u &&  gr_path[in]/gr_max_dist_bar[in]>cut_reg_l && gr_path[in]/gr_max_dist_bar[in]<cut_reg_u)cut8 << endl;
 	///////////////////////////////////
       }
       ////////////////// END 3
 
       /////////////////// PARTE 4: CARATTERIZZAZIONE DEI SINGOLI GRANI RICOSTRUITI ////////////////////////////////////////////////////////////////////
+
+      
       for(int in=0;in<gr_;in++){
 
 	//// INIZIALIZATIONS
@@ -1373,6 +1468,7 @@ void myData::Loop()
 	tmp_rdist=100;
 	tmp_rdist2=100;
 	tmp_rdist_ldust=100;
+
 	////////////////////////
       
 	if(grain[in] && gr_lx[in]!=gr_ly[in] && gr_ncl[in]<=30 && gr_ly[in]>=0.100  && gr_isolated[in]==-1){ // SOLO GRANI ISOLATI CHE PASSANO I CUT
@@ -1385,7 +1481,24 @@ void myData::Loop()
 	      }	    
 	    }
 	  }
+
+	  
+	  for(int kbin=0;kbin<totXbin;kbin++){
+	    for(int jbin=0;jbin<totYbin;jbin++){
+	      if(gr_x[in]>(-totXbin/2. + kbin) && gr_x[in]<(-totXbin/2. + kbin+1) && gr_y[in]>(-totYbin/2. + jbin) && gr_y[in]<(-totYbin/2. + jbin+1)){
+		new_phi_bar = TMath::ATan(1./TMath::Tan(phi_set_bar[in]));
+		phi_projX[kbin][jbin]+=TMath::Sin(new_phi_bar)*gr_max_dist_bar[in];
+		phi_projY[kbin][jbin]+=TMath::Sin(phi_set_bar[in])*gr_max_dist_bar[in];
+		phi_projX_adi[kbin][jbin]+=TMath::Sin(new_phi_bar);
+		phi_projY_adi[kbin][jbin]+=TMath::Sin(phi_set_bar[in]);
+		ngr_cell[kbin][jbin]++;
+	      }
+	    }
+	  }
+
 	  hrdist->Fill(tmp_rdist);
+
+	  
 	}
 	//////////////////////end
 
@@ -1399,7 +1512,7 @@ void myData::Loop()
 		phiang2 = TMath::ATan((cl_y2[ipol_gr[in][cl_ipol[jn]]]-cl_y2[jn])/(cl_x2[ipol_gr[in][cl_ipol[jn]]]-cl_x2[jn]));
 		npeak_vol_dif = (cl_vol[ipol_gr[in][cl_ipol[jn]]] - cl_vol[jn]);   // differenza volume tra i due picchi
 		npeak_npx_dif = (cl_npx[ipol_gr[in][cl_ipol[jn]]] - cl_npx[jn]);   // differenza area tra i due picchi
-		npeak_bri_dif = (cl_vol[ipol_gr[in][cl_ipol[jn]]]/cl_npx[ipol_gr[in][cl_ipol[jn]]] - cl_vol[jn]/cl_npx[jn]);  // differenza luminosità tra i due picchi
+		npeak_bri_dif = ((double)cl_vol[ipol_gr[in][cl_ipol[jn]]]/cl_npx[ipol_gr[in][cl_ipol[jn]]] - (double)cl_vol[jn]/cl_npx[jn]);  // differenza luminosità tra i due picchi
 		
 		//cout << phiang2 << endl;
 	      }
@@ -1495,6 +1608,8 @@ void myData::Loop()
 	  eSetMaxPol2=gr_maxpol2[in];
 	  eSetMaxBar=gr_max_dist_bar[in];
 	  eSetMaxAmp=gr_max_amp[in];
+	  eSetRmsAmp=gr_rms_amp[in];
+	  eSetMeanAmp=gr_mean_amp[in];
 	  eSetXRms=gr_x_rms[in];
 	  eSetYRms=gr_y_rms[in];
 	  eSetXBar=gr_x_mean[in];
@@ -1597,14 +1712,40 @@ void myData::Loop()
     
     } //end crash
   } // end su tutte le View
+
+  for(int kbin=0;kbin<totXbin;kbin++){
+    for(int jbin=0;jbin<totYbin;jbin++){
+      phi_projY[kbin][jbin]/=ngr_cell[kbin][jbin];
+      phi_projX[kbin][jbin]/=ngr_cell[kbin][jbin];
+      phi_projY_adi[kbin][jbin]/=ngr_cell[kbin][jbin];
+      phi_projX_adi[kbin][jbin]/=ngr_cell[kbin][jbin];
+      radius=TMath::Sqrt(TMath::Power(phi_projY[kbin][jbin],2)+TMath::Power(phi_projX[kbin][jbin],2));
+      if(ngr_cell[kbin][jbin]!=0){
+	//cout << phi_projY[kbin][jbin] << " " << phi_projX[kbin][jbin] << endl;
+	hxmap->SetBinContent(kbin+1,jbin+1,phi_projX_adi[kbin][jbin]);
+	hymap->SetBinContent(kbin+1,jbin+1,phi_projY_adi[kbin][jbin]);
+	hphimap->SetBinContent(kbin+1,jbin+1,TMath::ATan(phi_projY[kbin][jbin]/phi_projX[kbin][jbin]));
+	hphicell->Fill(TMath::ATan(phi_projY[kbin][jbin]/phi_projX[kbin][jbin]));	
+	hrphimap->Fill(TMath::ATan(phi_projY[kbin][jbin]/phi_projX[kbin][jbin]),radius);
+	hradius->SetBinContent(kbin+1,jbin+1,radius);
+      }
+    }
+  }
   
   grNcl->Write();
   hrdist->Write();
   hrdist2->Write();
   hrdist_ldust->Write();
+  hxmap->Write();
+  hymap->Write();
+  hradius->Write();
+  hphimap->Write();
+  hrphimap->Write();
+  hphicell->Write();
   Tree_out->Write();
   mybfcl.close();
   bfcl8.close();
+  cut8.close();
   f_out->Close();
   
 } // end Loop
